@@ -12,9 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 def validate_postgres_config() -> None:
-    """
-    Validate that all required PostgreSQL configuration is present.
-    Raises ValueError if any required configuration is missing.
+    """验证是否已提供所有必需的 PostgreSQL 配置。
+    缺少任何必需配置时抛出 ValueError。
     """
     required_vars = [
         "POSTGRES_USER",
@@ -38,7 +37,7 @@ def validate_postgres_config() -> None:
 
 
 def get_postgres_connection_string() -> str:
-    """Build and return the PostgreSQL connection string from settings."""
+    """根据配置构建并返回 PostgreSQL 连接字符串。"""
     if settings.POSTGRES_PASSWORD is None:
         raise ValueError("POSTGRES_PASSWORD is not set")
     return (
@@ -51,7 +50,7 @@ def get_postgres_connection_string() -> str:
 
 @asynccontextmanager
 async def get_postgres_saver():
-    """Initialize and return a PostgreSQL saver instance based on a connection pool for more resilent connections."""
+    """初始化并返回基于连接池的 PostgreSQL 保存器实例，以提升连接可靠性。"""
     validate_postgres_config()
     application_name = settings.POSTGRES_APPLICATION_NAME + "-" + "saver"
 
@@ -59,10 +58,10 @@ async def get_postgres_saver():
         get_postgres_connection_string(),
         min_size=settings.POSTGRES_MIN_CONNECTIONS_PER_POOL,
         max_size=settings.POSTGRES_MAX_CONNECTIONS_PER_POOL,
-        # Langgraph requires autocommmit=true and row_factory to be set to dict_row.
-        # Application_name is passed so you can identify the connection in your Postgres database connection manager.
+        # LangGraph 要求 autocommit=true，并将 row_factory 设为 dict_row。
+        # 传入 application_name，便于在 PostgreSQL 数据库连接管理器中识别该连接。
         kwargs={"autocommit": True, "row_factory": dict_row, "application_name": application_name},
-        # makes sure that the connection is still valid before using it
+        # 使用连接前，确认连接仍然有效
         check=AsyncConnectionPool.check_connection,
     ) as pool:
         try:
@@ -75,11 +74,9 @@ async def get_postgres_saver():
 
 @asynccontextmanager
 async def get_postgres_store():
-    """
-    Get a PostgreSQL store instance based on a connection pool for more resilent connections.
+    """获取基于连接池的 PostgreSQL 存储实例，以提升连接可靠性。
 
-    Returns an AsyncPostgresStore instance that can be used with async context manager pattern.
-
+    返回支持异步上下文管理器用法的 AsyncPostgresStore 实例。
     """
     validate_postgres_config()
     application_name = settings.POSTGRES_APPLICATION_NAME + "-" + "store"
@@ -88,10 +85,10 @@ async def get_postgres_store():
         get_postgres_connection_string(),
         min_size=settings.POSTGRES_MIN_CONNECTIONS_PER_POOL,
         max_size=settings.POSTGRES_MAX_CONNECTIONS_PER_POOL,
-        # Langgraph requires autocommmit=true and row_factory to be set to dict_row
-        # Application_name is passed so you can identify the connection in your Postgres database connection manager.
+        # LangGraph 要求 autocommit=true，并将 row_factory 设为 dict_row。
+        # 传入 application_name，便于在 PostgreSQL 数据库连接管理器中识别该连接。
         kwargs={"autocommit": True, "row_factory": dict_row, "application_name": application_name},
-        # makes sure that the connection is still valid before using it
+        # 使用连接前，确认连接仍然有效
         check=AsyncConnectionPool.check_connection,
     ) as pool:
         try:

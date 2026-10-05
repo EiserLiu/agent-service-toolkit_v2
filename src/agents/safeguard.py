@@ -100,7 +100,7 @@ class Safeguard:
 
     def _compile_messages(self, messages: list[AnyMessage]) -> list[AnyMessage]:
         role_mapping = {"ai": "Agent", "human": "User"}
-        # Create a formatted history string to evaluate
+        # 将历史消息格式化为待评估的字符串
         messages_str = [
             f"{role_mapping[m.type]}: {m.content}" for m in messages if m.type in ["ai", "human"]
         ]

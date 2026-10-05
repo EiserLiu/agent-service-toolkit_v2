@@ -1,0 +1,56 @@
+name: agent-service-toolkit-dev
+
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    init: true
+    command: sleep infinity
+    working_dir: /workspaces/agent-service-toolkit
+    env_file:
+      - ../.env
+    environment:
+      MODE: dev
+      HOST: 0.0.0.0
+      PORT: "8080"
+      PYTHONPATH: /workspaces/agent-service-toolkit/src
+      AGENT_URL: http://127.0.0.1:8080
+      DATABASE_TYPE: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agent_service_dev
+      WATCHFILES_FORCE_POLLING: "true"
+      STREAMLIT_SERVER_FILE_WATCHER_TYPE: poll
+    volumes:
+      - ..:/workspaces/agent-service-toolkit
+      - dev_venv:/opt/venv
+      - uv_cache:/home/vscode/.cache/uv
+      - ../privatecredentials:/privatecredentials:ro
+    ports:
+      - "127.0.0.1:8081:8080"
+      - "127.0.0.1:8502:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agent_service_dev
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agent_service_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dev_venv:
+  uv_cache:
+  postgres_dev_data:

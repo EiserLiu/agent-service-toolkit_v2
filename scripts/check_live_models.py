@@ -1,17 +1,16 @@
-"""Lightweight live smoke test against each configured LLM provider.
+"""对所有已配置的 LLM 服务商执行轻量级在线冒烟测试。
 
-Sends a minimal one-token prompt to every model in schema.models for providers
-whose credentials are present in the environment, and reports pass/fail per model.
-This is a maintainer tool for periodic model-catalog refreshes (see the
-model-refresh skill) -- it is NOT part of the pytest suite, since it makes real
-network calls against provider APIs and costs a small amount of real money.
+对于环境中已配置凭证的服务商，向 schema.models 中的每个模型发送
+只生成一个 token 的最小请求，并报告各模型是否通过。
+这是维护者定期刷新模型列表的工具（见 model-refresh 技能），不属于 pytest
+测试套件，因为它会真实访问服务商 API，并产生少量费用。
 
-Usage (run from the repo root; PYTHONPATH=src is required, same as src/run_service.py):
+用法（在仓库根目录运行；与 src/run_service.py 一样需要 PYTHONPATH=src）：
     PYTHONPATH=src uv run python scripts/check_live_models.py
     PYTHONPATH=src uv run python scripts/check_live_models.py --provider anthropic google
 
-If ANTHROPIC_API_KEY itself isn't settable in your environment, put the key under a
-different variable name and point --anthropic-api-key-env at it:
+如果环境不允许设置 ANTHROPIC_API_KEY，可以把密钥放入其他变量，
+再通过 --anthropic-api-key-env 指定：
     PYTHONPATH=src uv run python scripts/check_live_models.py --anthropic-api-key-env MY_VAR
 """
 
@@ -23,12 +22,11 @@ from collections.abc import Callable
 
 
 def _remap_anthropic_api_key(argv: list[str]) -> None:
-    """Copy the --anthropic-api-key-env variable to ANTHROPIC_API_KEY, if given.
+    """如果指定了 --anthropic-api-key-env，将其对应变量复制到 ANTHROPIC_API_KEY。
 
-    Runs before core.settings is imported, since Settings reads env vars at
-    construction time -- so this can't wait for the main argparse pass below.
-    Only acts when the flag is explicitly passed; otherwise ANTHROPIC_API_KEY
-    is left to whatever is (or isn't) already set.
+    此操作先于 core.settings 的导入，因为 Settings 在构造时读取环境变量，
+    无法等到下方主 argparse 解析过程再执行。
+    仅在显式传入该参数时生效；否则保持 ANTHROPIC_API_KEY 的原有状态。
     """
     if os.environ.get("ANTHROPIC_API_KEY"):
         return
@@ -64,9 +62,9 @@ from schema.models import (  # noqa: E402
 
 PROMPT = "Reply with exactly one word: OK"
 
-# Providers that only need an API key/flag to smoke test. Ollama, the OpenAI-compatible
-# slot, and the fake model are excluded: they need local infra or bespoke config rather
-# than a simple "is a key set" check, so they aren't a fit for this generic sweep.
+# 仅需 API 密钥或开关即可进行冒烟测试的服务商。不包含 Ollama、
+# OpenAI 兼容模型和模拟模型：它们需要本地基础设施或专用配置，
+# 无法只通过检查密钥是否设置来测试，因此不适合此通用扫描。
 PROVIDER_MODELS: dict[Provider, tuple[type[AllModelEnum], Callable[[], bool]]] = {
     Provider.OPENAI: (OpenAIModelName, lambda: bool(settings.OPENAI_API_KEY)),
     Provider.ANTHROPIC: (AnthropicModelName, lambda: bool(settings.ANTHROPIC_API_KEY)),

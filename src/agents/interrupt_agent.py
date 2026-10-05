@@ -14,14 +14,14 @@ from pydantic import BaseModel, Field
 
 from core import get_model, settings
 
-# Added logger
+# 添加日志记录器
 logger = logging.getLogger(__name__)
 
 
 class AgentState(MessagesState, total=False):
-    """`total=False` is PEP589 specs.
+    """`total=False` 来自 PEP 589 规范。
 
-    documentation: https://typing.readthedocs.io/en/latest/spec/typeddict.html#totality
+    文档：https://typing.readthedocs.io/en/latest/spec/typeddict.html#totality
     """
 
     birthdate: datetime | None
@@ -45,7 +45,7 @@ Don't tell the user what their sign is, you are just demonstrating your knowledg
 
 
 async def background(state: AgentState, config: RunnableConfig) -> AgentState:
-    """This node is to demonstrate doing work before the interrupt"""
+    """此节点演示在中断之前执行工作。"""
 
     m = get_model(config["configurable"].get("model", settings.DEFAULT_MODEL))
     model_runnable = wrap_model(m, background_prompt.format())
@@ -77,36 +77,36 @@ class BirthdateExtraction(BaseModel):
 async def determine_birthdate(
     state: AgentState, config: RunnableConfig, store: BaseStore
 ) -> AgentState:
-    """This node examines the conversation history to determine user's birthdate, checking store first."""
+    """此节点检查对话历史以确定用户的出生日期，并优先查询存储。"""
 
-    # Attempt to get user_id for unique storage per user
+    # 尝试获取 user_id，以便按用户隔离存储
     user_id = config["configurable"].get("user_id")
     logger.info(f"[determine_birthdate] Extracted user_id: {user_id}")
     namespace = None
     key = "birthdate"
-    birthdate = None  # Initialize birthdate
+    birthdate = None  # 初始化出生日期
 
     if user_id:
-        # Use user_id in the namespace to ensure uniqueness per user
+        # 在命名空间中使用 user_id，确保不同用户的数据互相隔离
         namespace = (user_id,)
 
-        # Check if we already have the birthdate in the store for this user
+        # 检查存储中是否已有该用户的出生日期
         try:
             result = await store.aget(namespace, key=key)
-            # Handle cases where store.aget might return Item directly or a list
+            # 兼容 store.aget 直接返回 Item 或返回列表的情况
             user_data = None
-            if result:  # Check if anything was returned
+            if result:  # 检查是否有返回结果
                 if isinstance(result, list):
-                    if result:  # Check if list is not empty
+                    if result:  # 检查列表是否非空
                         user_data = result[0]
-                else:  # Assume it's the Item object directly
+                else:  # 否则将结果视为直接返回的 Item 对象
                     user_data = result
 
             if user_data and user_data.value.get("birthdate"):
-                # Convert ISO format string back to datetime object
+                # 将 ISO 格式字符串转换回 datetime 对象
                 birthdate_str = user_data.value["birthdate"]
                 birthdate = datetime.fromisoformat(birthdate_str) if birthdate_str else None
-                # We already have the birthdate, return it
+                # 已获取出生日期，直接返回
                 logger.info(
                     f"[determine_birthdate] Found birthdate in store for user {user_id}: {birthdate}"
                 )
@@ -115,56 +115,56 @@ async def determine_birthdate(
                     "messages": [],
                 }
         except Exception as e:
-            # Log the error or handle cases where the store might be unavailable
+            # 记录错误，处理存储可能不可用的情况
             logger.error(f"Error reading from store for namespace {namespace}, key {key}: {e}")
-            # Proceed with extraction if read fails
+            # 读取失败时继续尝试提取
             pass
     else:
-        # If no user_id, we cannot reliably store/retrieve user-specific data.
-        # Consider logging this situation.
+        # 没有 user_id 时，无法可靠地保存或读取特定用户的数据。
+        # 可考虑记录这种情况。
         logger.warning(
             "Warning: user_id not found in config. Skipping persistent birthdate storage/retrieval for this run."
         )
 
-    # If birthdate wasn't retrieved from store, proceed with extraction
+    # 未从存储中获取出生日期时，继续尝试提取
     m = get_model(config["configurable"].get("model", settings.DEFAULT_MODEL))
     model_runnable = wrap_model(
         m.with_structured_output(BirthdateExtraction), birthdate_extraction_prompt.format()
     ).with_config(tags=["skip_stream"])
     response: BirthdateExtraction = await model_runnable.ainvoke(state, config)
 
-    # If no birthdate found after extraction attempt, interrupt
+    # 提取后仍未找到出生日期，则中断执行
     if response.birthdate is None:
         birthdate_input = interrupt(f"{response.reasoning}\nPlease tell me your birthdate?")
-        # Re-run extraction with the new input
+        # 使用新输入重新提取
         state["messages"].append(HumanMessage(birthdate_input))
-        # Note: Recursive call might need careful handling of depth or state updates
+        # 注意：递归调用需要谨慎处理深度和状态更新
         return await determine_birthdate(state, config, store)
 
-    # Birthdate found - convert string to datetime
+    # 已找到出生日期，将字符串转换为 datetime
     try:
         birthdate = datetime.fromisoformat(response.birthdate)
     except ValueError:
-        # If parsing fails, ask for clarification
+        # 解析失败时，请用户补充说明
         birthdate_input = interrupt(
             "I couldn't understand the date format. Please provide your birthdate in YYYY-MM-DD format."
         )
-        # Re-run extraction with the new input
+        # 使用新输入重新提取
         state["messages"].append(HumanMessage(birthdate_input))
-        # Note: Recursive call might need careful handling of depth or state updates
+        # 注意：递归调用需要谨慎处理深度和状态更新
         return await determine_birthdate(state, config, store)
 
-    # Store the newly extracted birthdate only if we have a user_id
+    # 仅在存在 user_id 时保存新提取的出生日期
     if user_id and namespace:
-        # Convert datetime to ISO format string for JSON serialization
+        # 将 datetime 转为 ISO 格式字符串，以便 JSON 序列化
         birthdate_str = birthdate.isoformat() if birthdate else None
         try:
             await store.aput(namespace, key, {"birthdate": birthdate_str})
         except Exception as e:
-            # Log the error or handle cases where the store write might fail
+            # 记录错误，处理存储写入可能失败的情况
             logger.error(f"Error writing to store for namespace {namespace}, key {key}: {e}")
 
-    # Return the determined birthdate (either from store or extracted)
+    # 返回确定的出生日期（来自存储或本次提取）
     logger.info(f"[determine_birthdate] Returning birthdate {birthdate} for user {user_id}")
     return {
         "birthdate": birthdate,
@@ -188,7 +188,7 @@ Otherwise, respond conversationally based on their message.
 
 
 async def generate_response(state: AgentState, config: RunnableConfig) -> AgentState:
-    """Generates the final response based on the user's query and the available birthdate."""
+    """根据用户的问题和已知出生日期生成最终回复。"""
     birthdate = state.get("birthdate")
     if state.get("messages") and isinstance(state["messages"][-1], HumanMessage):
         last_user_message = state["messages"][-1].content
@@ -196,8 +196,8 @@ async def generate_response(state: AgentState, config: RunnableConfig) -> AgentS
         last_user_message = ""
 
     if not birthdate:
-        # This should ideally not be reached if determine_birthdate worked correctly and possibly interrupted.
-        # Handle cases where birthdate might still be missing.
+        # 如果 determine_birthdate 正常工作并在必要时中断，通常不会进入此分支。
+        # 这里处理出生日期仍然缺失的情况。
         return {
             "messages": [
                 AIMessage(
@@ -206,7 +206,7 @@ async def generate_response(state: AgentState, config: RunnableConfig) -> AgentS
             ]
         }
 
-    birthdate_str = birthdate.strftime("%B %d, %Y")  # Format for display
+    birthdate_str = birthdate.strftime("%B %d, %Y")  # 格式化为展示文本
 
     m = get_model(config["configurable"].get("model", settings.DEFAULT_MODEL))
     model_runnable = wrap_model(
@@ -217,7 +217,7 @@ async def generate_response(state: AgentState, config: RunnableConfig) -> AgentS
     return {"messages": [AIMessage(content=response.content)]}
 
 
-# Define the graph
+# 定义图
 agent = StateGraph(AgentState)
 agent.add_node("background", background)
 agent.add_node("determine_birthdate", determine_birthdate)

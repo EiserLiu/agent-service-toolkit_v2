@@ -23,7 +23,7 @@ class AgentClientError(Exception):
 
 
 class AgentClient:
-    """Client for interacting with the agent service."""
+    """与 Agent 服务交互的客户端。"""
 
     def __init__(
         self,
@@ -32,15 +32,13 @@ class AgentClient:
         timeout: float | None = None,
         get_info: bool = True,
     ) -> None:
-        """
-        Initialize the client.
+        """初始化客户端。
 
-        Args:
-            base_url (str): The base URL of the agent service.
-            agent (str): The name of the default agent to use.
-            timeout (float, optional): The timeout for requests.
-            get_info (bool, optional): Whether to fetch agent information on init.
-                Default: True
+        参数：
+            base_url (str)：Agent 服务的基础地址。
+            agent (str)：默认使用的 Agent 名称。
+            timeout (float, 可选)：请求超时时间。
+            get_info (bool, 可选)：是否在初始化时获取 Agent 信息，默认为 True。
         """
         self.base_url = base_url
         self.auth_secret = os.getenv("AUTH_SECRET")
@@ -93,18 +91,17 @@ class AgentClient:
         user_id: str | None = None,
         agent_config: dict[str, Any] | None = None,
     ) -> ChatMessage:
-        """
-        Invoke the agent asynchronously. Only the final message is returned.
+        """异步调用 Agent，仅返回最终消息。
 
-        Args:
-            message (str): The message to send to the agent
-            model (str, optional): LLM model to use for the agent
-            thread_id (str, optional): Thread ID for continuing a conversation
-            user_id (str, optional): User ID for continuing a conversation across multiple threads
-            agent_config (dict[str, Any], optional): Additional configuration to pass through to the agent
+        参数：
+            message (str)：发送给 Agent 的消息。
+            model (str, 可选)：Agent 使用的 LLM 模型。
+            thread_id (str, 可选)：用于继续对话的会话 ID。
+            user_id (str, 可选)：用于跨会话继续对话的用户 ID。
+            agent_config (dict[str, Any], 可选)：透传给 Agent 的附加配置。
 
-        Returns:
-            AnyMessage: The response from the agent
+        返回值：
+            AnyMessage：Agent 的响应。
         """
         if not self.agent:
             raise AgentClientError("No agent selected. Use update_agent() to select an agent.")
@@ -139,18 +136,17 @@ class AgentClient:
         user_id: str | None = None,
         agent_config: dict[str, Any] | None = None,
     ) -> ChatMessage:
-        """
-        Invoke the agent synchronously. Only the final message is returned.
+        """同步调用 Agent，仅返回最终消息。
 
-        Args:
-            message (str): The message to send to the agent
-            model (str, optional): LLM model to use for the agent
-            thread_id (str, optional): Thread ID for continuing a conversation
-            user_id (str, optional): User ID for continuing a conversation across multiple threads
-            agent_config (dict[str, Any], optional): Additional configuration to pass through to the agent
+        参数：
+            message (str)：发送给 Agent 的消息。
+            model (str, 可选)：Agent 使用的 LLM 模型。
+            thread_id (str, 可选)：用于继续对话的会话 ID。
+            user_id (str, 可选)：用于跨会话继续对话的用户 ID。
+            agent_config (dict[str, Any], 可选)：透传给 Agent 的附加配置。
 
-        Returns:
-            ChatMessage: The response from the agent
+        返回值：
+            ChatMessage：Agent 的响应。
         """
         if not self.agent:
             raise AgentClientError("No agent selected. Use update_agent() to select an agent.")
@@ -188,13 +184,13 @@ class AgentClient:
                 raise Exception(f"Error JSON parsing message from server: {e}")
             match parsed["type"]:
                 case "message":
-                    # Convert the JSON formatted message to an AnyMessage
+                    # 将 JSON 格式的消息转换为 AnyMessage
                     try:
                         return ChatMessage.model_validate(parsed["content"])
                     except Exception as e:
                         raise Exception(f"Server returned invalid message: {e}")
                 case "token":
-                    # Yield the str token directly
+                    # 直接产出字符串 token
                     return parsed["content"]
                 case "error":
                     error_msg = "Error: " + parsed["content"]
@@ -210,24 +206,21 @@ class AgentClient:
         agent_config: dict[str, Any] | None = None,
         stream_tokens: bool = True,
     ) -> Generator[ChatMessage | str, None, None]:
-        """
-        Stream the agent's response synchronously.
+        """同步流式获取 Agent 的响应。
 
-        Each intermediate message of the agent process is yielded as a ChatMessage.
-        If stream_tokens is True (the default value), the response will also yield
-        content tokens from streaming models as they are generated.
+        Agent 执行过程中的每条中间消息以 ChatMessage 形式产出。
+        stream_tokens 为 True（默认值）时，还会实时产出流式模型生成的内容 token。
 
-        Args:
-            message (str): The message to send to the agent
-            model (str, optional): LLM model to use for the agent
-            thread_id (str, optional): Thread ID for continuing a conversation
-            user_id (str, optional): User ID for continuing a conversation across multiple threads
-            agent_config (dict[str, Any], optional): Additional configuration to pass through to the agent
-            stream_tokens (bool, optional): Stream tokens as they are generated
-                Default: True
+        参数：
+            message (str)：发送给 Agent 的消息。
+            model (str, 可选)：Agent 使用的 LLM 模型。
+            thread_id (str, 可选)：用于继续对话的会话 ID。
+            user_id (str, 可选)：用于跨会话继续对话的用户 ID。
+            agent_config (dict[str, Any], 可选)：透传给 Agent 的附加配置。
+            stream_tokens (bool, 可选)：是否实时输出生成的 token，默认为 True。
 
-        Returns:
-            Generator[ChatMessage | str, None, None]: The response from the agent
+        返回值：
+            Generator[ChatMessage | str, None, None]：Agent 响应的生成器。
         """
         if not self.agent:
             raise AgentClientError("No agent selected. Use update_agent() to select an agent.")
@@ -267,24 +260,21 @@ class AgentClient:
         agent_config: dict[str, Any] | None = None,
         stream_tokens: bool = True,
     ) -> AsyncGenerator[ChatMessage | str, None]:
-        """
-        Stream the agent's response asynchronously.
+        """异步流式获取 Agent 的响应。
 
-        Each intermediate message of the agent process is yielded as an AnyMessage.
-        If stream_tokens is True (the default value), the response will also yield
-        content tokens from streaming modelsas they are generated.
+        Agent 执行过程中的每条中间消息以 AnyMessage 形式产出。
+        stream_tokens 为 True（默认值）时，还会实时产出流式模型生成的内容 token。
 
-        Args:
-            message (str): The message to send to the agent
-            model (str, optional): LLM model to use for the agent
-            thread_id (str, optional): Thread ID for continuing a conversation
-            user_id (str, optional): User ID for continuing a conversation across multiple threads
-            agent_config (dict[str, Any], optional): Additional configuration to pass through to the agent
-            stream_tokens (bool, optional): Stream tokens as they are generated
-                Default: True
+        参数：
+            message (str)：发送给 Agent 的消息。
+            model (str, 可选)：Agent 使用的 LLM 模型。
+            thread_id (str, 可选)：用于继续对话的会话 ID。
+            user_id (str, 可选)：用于跨会话继续对话的用户 ID。
+            agent_config (dict[str, Any], 可选)：透传给 Agent 的附加配置。
+            stream_tokens (bool, 可选)：是否实时输出生成的 token，默认为 True。
 
-        Returns:
-            AsyncGenerator[ChatMessage | str, None]: The response from the agent
+        返回值：
+            AsyncGenerator[ChatMessage | str, None]：Agent 响应的异步生成器。
         """
         if not self.agent:
             raise AgentClientError("No agent selected. Use update_agent() to select an agent.")
@@ -312,7 +302,7 @@ class AgentClient:
                             parsed = self._parse_stream_line(line)
                             if parsed is None:
                                 break
-                            # Don't yield empty string tokens as they cause generator issues
+                            # 不产出空字符串 token，避免导致生成器问题
                             if parsed != "":
                                 yield parsed
             except httpx.HTTPError as e:
@@ -321,12 +311,11 @@ class AgentClient:
     async def acreate_feedback(
         self, run_id: str, key: str, score: float, kwargs: dict[str, Any] = {}
     ) -> None:
-        """
-        Create a feedback record for a run.
+        """为一次运行创建反馈记录。
 
-        This is a simple wrapper for the LangSmith create_feedback API, so the
-        credentials can be stored and managed in the service rather than the client.
-        See: https://api.smith.langchain.com/redoc#tag/feedback/operation/create_feedback_api_v1_feedback_post
+        对 LangSmith create_feedback API 的简单封装，使凭证统一在服务端
+        保存和管理，无需存放于客户端。
+        参考：https://api.smith.langchain.com/redoc#tag/feedback/operation/create_feedback_api_v1_feedback_post
         """
         request = Feedback(run_id=run_id, key=key, score=score, kwargs=kwargs)
         async with httpx.AsyncClient() as client:
@@ -343,12 +332,11 @@ class AgentClient:
                 raise AgentClientError(f"Error: {e}")
 
     def get_history(self, thread_id: str, agent: str | None = None) -> ChatHistory:
-        """
-        Get chat history.
+        """获取聊天历史。
 
-        Args:
-            thread_id (str, optional): Thread ID for identifying a conversation
-            agent (str, optional): The agent whose graph should interpret the thread.
+        参数：
+            thread_id (str, 可选)：标识对话的会话 ID。
+            agent (str, 可选)：使用哪个 Agent 的图读取该会话。
         """
         agent = agent or self.agent
         request = ChatHistoryInput(thread_id=thread_id)
@@ -376,13 +364,12 @@ class AgentClient:
     def get_user_threads(
         self, user_id: str, agent: str | None = None, limit: int = 20
     ) -> UserThreads:
-        """
-        List a user's conversation threads.
+        """列出用户的会话。
 
-        Args:
-            user_id (str): User ID to list threads for.
-            agent (str, optional): The agent whose threads should be listed.
-            limit (int, optional): Maximum number of threads to return.
+        参数：
+            user_id (str)：要查询的用户 ID。
+            agent (str, 可选)：要查询会话的 Agent。
+            limit (int, 可选)：最多返回的会话数。
         """
         url, params = self._user_threads_request(user_id, agent, limit)
         try:
@@ -401,13 +388,12 @@ class AgentClient:
     async def aget_user_threads(
         self, user_id: str, agent: str | None = None, limit: int = 20
     ) -> UserThreads:
-        """
-        List a user's conversation threads asynchronously.
+        """异步列出用户的会话。
 
-        Args:
-            user_id (str): User ID to list threads for.
-            agent (str, optional): The agent whose threads should be listed.
-            limit (int, optional): Maximum number of threads to return.
+        参数：
+            user_id (str)：要查询的用户 ID。
+            agent (str, 可选)：要查询会话的 Agent。
+            limit (int, 可选)：最多返回的会话数。
         """
         url, params = self._user_threads_request(user_id, agent, limit)
         async with httpx.AsyncClient() as client:

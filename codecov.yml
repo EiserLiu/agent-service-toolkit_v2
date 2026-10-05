@@ -1,11 +1,11 @@
 coverage:
   status:
-    # Fail PRs that reduce total coverage by more than 2%
+    # 总覆盖率下降超过 2% 时，将 PR 检查标记为失败
     project:
       default:
         target: auto
         threshold: 2%
-    # Treat patch coverage as informational only
+    # 补丁覆盖率仅作为参考信息
     patch:
       default:
         informational: true

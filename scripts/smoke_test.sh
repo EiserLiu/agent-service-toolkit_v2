@@ -1,56 +1,56 @@
 #!/usr/bin/env bash
-# On-demand smoke tests for docker-backed integration paths that aren't in the
-# fast unit-test suite or the default CI run: the Postgres and MongoDB
-# checkpointers, the AG-UI endpoint, and LangFuse tracing. Lets a maintainer (or
-# agent) verify these still work without waiting for a full CI cycle.
+# 按需测试未纳入快速单元测试和默认 CI 的 Docker 集成链路：
+# PostgreSQL 和 MongoDB 检查点保存器、
+# AG-UI 接口及 Langfuse 追踪。维护者或 Agent
+# 无需等待完整 CI 周期即可验证这些功能。
 #
-# Usage:
-#   ./scripts/smoke_test.sh                 # default targets: postgres, mongo, agui
-#   ./scripts/smoke_test.sh mongo           # run a single target
-#   ./scripts/smoke_test.sh postgres agui   # run a subset
-#   ./scripts/smoke_test.sh langfuse        # run the heavy langfuse target on its own
-#   ./scripts/smoke_test.sh all             # everything, including langfuse
+# 用法：
+#   ./scripts/smoke_test.sh                 # 默认目标：postgres、mongo、agui
+#   ./scripts/smoke_test.sh mongo           # 运行单个目标
+#   ./scripts/smoke_test.sh postgres agui   # 运行部分目标
+#   ./scripts/smoke_test.sh langfuse        # 单独运行较重的 langfuse 目标
+#   ./scripts/smoke_test.sh all             # 运行全部目标，包括 langfuse
 #
-# Targets: postgres, mongo, agui, langfuse
-#   langfuse is excluded from the default run: it spins up LangFuse's full
-#   self-host stack (6 services, ~5GB of images) and takes noticeably longer, so
-#   run it explicitly or via `all`. It also needs the cgr.dev container registry
-#   reachable (for the minio image) — in a restricted-egress cloud environment,
-#   add cgr.dev to the network allowlist first.
+# 目标：postgres、mongo、agui、langfuse
+# 默认不运行 langfuse，因为它会启动完整的 Langfuse
+# 自托管服务栈（6 个服务，约 5GB 镜像），耗时明显更长。
+# 请显式指定或通过 `all` 运行。还需能访问 cgr.dev 容器镜像仓库
+# 以拉取 minio 镜像；在限制出站访问的云环境中，
+# 请先将 cgr.dev 加入网络允许列表。
 #
-# Only databases run in Docker; the service itself runs on the host via uv,
-# pointed at localhost. That's deliberate — building the service image requires
-# reaching package registries from inside the build container, which is blocked
-# in some sandboxed agent environments. Running on the host sidesteps that while
-# still exercising real database containers.
+# 只有数据库在 Docker 中运行；服务本身通过 uv 在宿主机运行，
+# 并连接 localhost。这是有意设计的：构建服务镜像时需要
+# 从构建容器内访问包仓库，而某些 Agent 沙箱环境
+# 会阻止此类访问。宿主机运行可避开此限制，
+# 同时仍能验证真实数据库容器。
 #
-# A green run is meant to actually mean something. Beyond the pytest/API check,
-# each target independently verifies the intended dependency was really used:
-# the DB targets query the container for this run's thread, and langfuse queries
-# its API for the trace. This is what catches a silent fallback (e.g. to SQLite)
-# that would otherwise pass the API-level test against any working checkpointer.
+# 测试通过应有实际依据。除 pytest/API 检查外，
+# 各目标还会独立确认确实使用了预期依赖：
+# 数据库目标直接查询容器中本次运行的会话；langfuse
+# 通过 API 查询追踪记录。这能发现静默回退（如回退到 SQLite），
+# 否则任何可用检查点后端都可能让 API 层测试误通过。
 #
-# Requires: docker, docker compose, uv, node (AG-UI client), python3, curl
+# 依赖：docker、docker compose、uv、node（AG-UI 客户端）、python3、curl
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Unique per run so the backend verification below reflects THIS run's data even
-# if the database volume isn't empty. Exported so the pytest test uses the same
-# thread id (see tests/smoke/test_persistence.py).
+# 每次运行使用唯一标识，即使数据库卷非空，后续验证
+# 也只检查本次运行的数据。导出此变量，让 pytest 使用相同的
+# 会话 ID（见 tests/smoke/test_persistence.py）。
 SMOKE_THREAD_ID="smoke-test-$(date +%s)-$$"
 export SMOKE_THREAD_ID
 
-# LangFuse's self-host compose is fetched from upstream at this pinned tag rather
-# than vendored into the repo. Bump this to move to a newer LangFuse.
+# 从上游指定标签获取 Langfuse 自托管 Compose 配置，不将其副本纳入仓库。
+# 升级此标签即可使用新版 Langfuse。
 LANGFUSE_REF="v3.225.5"
 
 SERVICE_PID=""
 SERVICE_LOG=""
-LANGFUSE_COMPOSE=""  # temp compose file, set while the langfuse target runs
+LANGFUSE_COMPOSE=""  # 临时 Compose 文件，在运行 langfuse 目标时设置
 
 start_service() {
-  # Start the agent service on the host with the given backend env, then wait
-  # until it reports healthy. Args: KEY=VALUE ... connection settings.
+  # 使用指定后端环境在宿主机启动 Agent 服务，然后等待
+  # 健康检查通过。参数：KEY=VALUE ...，用于指定连接设置。
   if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
     echo "  ✗ refusing to start: something is already listening on :8080"
     return 1
@@ -87,7 +87,7 @@ stop_service() {
 }
 
 wait_healthy() {
-  # Wait until a container reports healthy. Args: container id.
+  # 等待容器健康检查通过。参数：容器 ID。
   local cid="$1" status=""
   for _ in $(seq 1 20); do
     status="$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo missing)"
@@ -100,7 +100,7 @@ wait_healthy() {
 }
 
 assert_positive_count() {
-  # Args: count-string, label. Fails loudly unless count is an integer > 0.
+  # 参数：计数字符串、标签。计数不是大于 0 的整数时明确报错。
   local n="$1" label="$2"
   if [[ "$n" =~ ^[0-9]+$ ]] && (( n > 0 )); then
     echo "  ✓ verified: $n $label"
@@ -113,8 +113,8 @@ assert_positive_count() {
 cleanup() {
   echo "--- Tearing down ---"
   stop_service
-  # down removes every service in the merged project (postgres + mongo), so this
-  # one call cleans up regardless of which target was running.
+  # down 会移除合并项目中的所有服务（postgres + mongo），
+  # 因此无论之前运行哪个目标，一次调用即可完成清理。
   docker compose -f compose.yaml -f docker/compose.mongo.yaml down -v >/dev/null 2>&1 || true
   if [[ -n "$LANGFUSE_COMPOSE" && -f "$LANGFUSE_COMPOSE" ]]; then
     docker compose -f "$LANGFUSE_COMPOSE" down -v >/dev/null 2>&1 || true
@@ -159,15 +159,15 @@ smoke_mongo() {
 
 smoke_agui() {
   echo "=== AG-UI endpoint ==="
-  # AG-UI is backend-agnostic, so the default SQLite checkpointer is fine here
-  # and no database container is needed.
+  # AG-UI 与存储后端无关，因此使用默认 SQLite 检查点保存器即可，
+  # 无需数据库容器。
   start_service
   local out
   out="$(cd scripts/agui-client && npm install --silent && \
     AGENT_URL=http://localhost:8080 node client.mjs "Tell me a joke!" chatbot)" || true
   echo "$out"
-  # A green exit isn't enough: confirm the stream actually completed and returned
-  # the fake model's response, not an empty or partial run.
+  # 仅正常退出还不够：确认流已完整结束并返回
+  # 模拟模型的响应，而不是空结果或部分结果。
   if ! grep -q "RUN_FINISHED" <<<"$out"; then
     echo "  ✗ FAIL: AG-UI stream did not reach RUN_FINISHED"
     return 1
@@ -184,9 +184,9 @@ smoke_langfuse() {
   echo "=== LangFuse tracing (self-hosted) ==="
   local pk="pk-lf-smoke-public" sk="sk-lf-smoke-secret"
 
-  # Fetch LangFuse's official self-host compose (pinned) rather than vendoring it.
-  # Bare mktemp (no --suffix) for macOS/BSD portability; `docker compose -f`
-  # doesn't care about the file extension.
+  # 获取指定版本的 Langfuse 官方自托管 Compose 配置，不在仓库中维护副本。
+  # 使用不带 --suffix 的 mktemp，以兼容 macOS/BSD；`docker compose -f`
+  # 不要求特定文件扩展名。
   LANGFUSE_COMPOSE="$(mktemp)"
   echo "  fetching LangFuse compose @ $LANGFUSE_REF"
   if ! curl -sSL "https://raw.githubusercontent.com/langfuse/langfuse/$LANGFUSE_REF/docker-compose.yml" \
@@ -195,8 +195,8 @@ smoke_langfuse() {
     return 1
   fi
 
-  # LANGFUSE_INIT_* seeds an org/project/user and known API keys on first boot, so
-  # no manual signup is needed and the keys below are deterministic.
+  # LANGFUSE_INIT_* 在首次启动时预置组织、项目、用户和已知 API 密钥，
+  # 因此无需手动注册，下方密钥的值也是确定的。
   echo "  starting LangFuse stack (this pulls ~5GB the first time)..."
   LANGFUSE_INIT_ORG_ID=smoke-org LANGFUSE_INIT_ORG_NAME=smoke \
   LANGFUSE_INIT_PROJECT_ID=smoke-project LANGFUSE_INIT_PROJECT_NAME=smoke \
@@ -218,7 +218,7 @@ smoke_langfuse() {
   start_service LANGFUSE_TRACING=true LANGFUSE_HOST=http://localhost:3000 \
     LANGFUSE_PUBLIC_KEY="$pk" LANGFUSE_SECRET_KEY="$sk"
 
-  # (1) service-level: /health runs langfuse.auth_check() against the instance.
+  # （1）服务级检查：/health 对实例执行 langfuse.auth_check()。
   if curl -s http://localhost:8080/health | grep -q '"langfuse":"connected"'; then
     echo "  ✓ /health reports langfuse connected"
   else
@@ -226,7 +226,7 @@ smoke_langfuse() {
     return 1
   fi
 
-  # (2) decisive: a traced invoke must actually produce a trace in LangFuse.
+  # （2）关键检查：启用追踪的调用必须在 Langfuse 中生成真实追踪记录。
   uv run python -c "
 import sys; sys.path.insert(0, 'src')
 from client import AgentClient
@@ -254,7 +254,7 @@ print('  traced invoke ok')
 targets=("$@")
 [[ ${#targets[@]} -eq 0 ]] && targets=(postgres mongo agui)
 
-# Expand "all" to every target, including the heavy langfuse one.
+# 将 "all" 展开为全部目标，包括较重的 langfuse。
 expanded=()
 for t in "${targets[@]}"; do
   if [[ "$t" == "all" ]]; then

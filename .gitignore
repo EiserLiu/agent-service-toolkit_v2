@@ -1,4 +1,4 @@
-# Streamlit and sqlite
+# Streamlit 和 SQLite 文件
 .streamlit/secrets.toml
 checkpoints.db
 checkpoints.db-*
@@ -15,15 +15,15 @@ checkpoints.db-*
 .cursorindexingignore
 .specstory/
 
-# Byte-compiled / optimized / DLL files
+# 字节码、优化后的文件和 DLL 文件
 __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
+# C 扩展
 *.so
 
-# Distribution / packaging
+# 发布和打包产物
 .Python
 build/
 develop-eggs/
@@ -44,16 +44,16 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+# 通常由 Python 脚本根据模板生成这些文件，
+# 以便在 PyInstaller 构建 exe 前注入日期等信息。
 *.manifest
 *.spec
 
-# Installer logs
+# 安装程序日志
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# 单元测试和覆盖率报告
 htmlcov/
 .tox/
 .nox/
@@ -68,24 +68,24 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
+# 翻译文件
 *.mo
 *.pot
 
-# Django stuff:
+# Django 相关文件：
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Flask stuff:
+# Flask 相关文件：
 instance/
 .webassets-cache
 
-# Scrapy stuff:
+# Scrapy 相关文件：
 .scrapy
 
-# Sphinx documentation
+# Sphinx 文档
 docs/_build/
 
 # PyBuilder
@@ -100,45 +100,45 @@ profile_default/
 ipython_config.py
 
 # pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
+# 对于需要在多种环境中运行的库或包，通常可以忽略这些文件；
+# 其他情况下可以将它们纳入版本控制：
 # .python-version
 
 # pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
+# 根据 pypa/pipenv#598，建议将 Pipfile.lock 纳入版本控制。
+# 但多人协作时，如果存在平台专用依赖或
+# 不支持跨平台的依赖，pipenv 可能安装无法使用的依赖，
+# 或者无法安装所有必需的依赖。
 #Pipfile.lock
 
 # poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
+# 与 Pipfile.lock 类似，通常建议将 poetry.lock 纳入版本控制。
+# 对于二进制包尤其建议这样做，以保证可复现性；
+# 而库项目更常选择忽略此文件。
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
 
 # pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+# 与 Pipfile.lock 类似，通常建议将 pdm.lock 纳入版本控制。
 #pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
+# pdm 在 .pdm.toml 中保存项目级配置，
+# 但建议不要将此文件纳入版本控制。
 #   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
 .pdm.toml
 .pdm-python
 .pdm-build/
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+# PEP 582；例如 github.com/David-OConnor/pyflow 和 github.com/pdm-project/pdm 会使用它
 __pypackages__/
 
-# Celery stuff
+# Celery 相关文件
 celerybeat-schedule
 celerybeat.pid
 
-# SageMath parsed files
+# SageMath 解析生成的文件
 *.sage.py
 
-# Environments
+# 环境文件
 .env
 .python-version
 .venv
@@ -148,51 +148,51 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
+# Spyder 项目设置
 .spyderproject
 .spyproject
 
-# Rope project settings
+# Rope 项目设置
 .ropeproject
 
-# mkdocs documentation
+# MkDocs 文档
 /site
 
-# Pyre type checker
+# Pyre 类型检查器
 .pyre/
 
-# pytype static type analyzer
+# pytype 静态类型分析器
 .pytype/
 
-# Cython debug symbols
+# Cython 调试符号
 cython_debug/
 
 # PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+# JetBrains 专用模板单独维护在 JetBrains.gitignore 中，地址为
+# https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+# 可以添加到全局 gitignore 或合并到本文件。如果希望更彻底地忽略，
+# 可取消下方规则的注释以忽略整个 idea 文件夹（不推荐）。
 .idea/
 
-# Data
+# 数据文件
 *.docx
 *.pdf
 
-# Chroma db
+# Chroma 数据库
 *.db
 *.sqlite3
 *.bin
 
-# Private Credentials, ignore everything in the folder but the .gitkeep file
+# 私有凭证：忽略目录中的所有文件，仅保留 .gitkeep
 privatecredentials/*
 !privatecredentials/.gitkeep
 
-# Node (scripts/agui-client)
+# Node 相关文件（scripts/agui-client）
 node_modules/
 package-lock.json
 
-# Live-app smoke test failure screenshot (scripts/smoke_live_app.py)
+# 在线应用冒烟测试失败时的截图（scripts/smoke_live_app.py）
 smoke_live_app_failure.png
 
-# Claude Code agent worktrees (ephemeral, per-agent git checkouts)
+# Claude Code Agent 工作树（每个 Agent 独立使用的临时 Git 检出目录）
 .claude/worktrees/

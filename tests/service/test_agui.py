@@ -19,7 +19,7 @@ FAKE_RESPONSE = "The answer is 42"
 
 event_adapter: TypeAdapter[Event] = TypeAdapter(Event)
 
-# Captures the configurable seen by the agent, for the forwardedProps test
+# 记录 Agent 实际收到的 configurable，供 forwardedProps 测试使用
 captured_configurable: dict[str, Any] = {}
 
 
@@ -51,14 +51,14 @@ interrupt_agent = interrupt_graph.compile(checkpointer=MemorySaver())
 
 @pytest.fixture(autouse=True)
 def _reset_captured_configurable():
-    """Every test using model_agent writes to this shared dict; reset before each test."""
+    """使用 model_agent 的测试都会写入此共享字典，因此每次测试前先重置。"""
     captured_configurable.clear()
     yield
 
 
 @pytest.fixture
 def allow_fake_model(monkeypatch):
-    """Make FakeModelName.FAKE pass the AVAILABLE_MODELS allowlist check."""
+    """使 FakeModelName.FAKE 能通过 AVAILABLE_MODELS 允许列表检查。"""
     monkeypatch.setattr(settings, "AVAILABLE_MODELS", {FakeModelName.FAKE})
 
 
@@ -90,7 +90,7 @@ def run_input(thread_id: str = "test-thread", **overrides: Any) -> dict[str, Any
 
 
 def collect_events(test_client, path: str, body: dict[str, Any]) -> list[dict[str, Any]]:
-    """POST to an AG-UI endpoint and parse the SSE response into event dicts."""
+    """向 AG-UI 接口发送 POST 请求，并将 SSE 响应解析为事件字典。"""
     with test_client.stream("POST", path, json=body) as response:
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/event-stream")
@@ -102,10 +102,10 @@ def collect_events(test_client, path: str, body: dict[str, Any]) -> list[dict[st
 
 
 def test_agui_stream_lifecycle(mock_agui_agent, test_client) -> None:
-    """A basic run emits a protocol-conformant AG-UI event stream."""
+    """基本运行应输出符合 AG-UI 协议的事件流。"""
     events = collect_events(test_client, "/agui/model-agent/run", run_input())
 
-    # Every event must parse as a valid AG-UI event (protocol conformance).
+    # 每个事件都必须能解析为有效的 AG-UI 事件，以验证协议兼容性。
     for event in events:
         event_adapter.validate_python(event)
 
@@ -113,11 +113,11 @@ def test_agui_stream_lifecycle(mock_agui_agent, test_client) -> None:
     assert types[0] == "RUN_STARTED"
     assert types[-1] == "RUN_FINISHED"
 
-    # Tokens assemble into the model response
+    # 将 token 拼接为模型响应
     text = "".join(e["delta"] for e in events if e["type"] == "TEXT_MESSAGE_CONTENT")
     assert text == FAKE_RESPONSE
 
-    # The final messages snapshot includes the exchange
+    # 最终消息快照包含本轮对话
     snapshots = [e for e in events if e["type"] == "MESSAGES_SNAPSHOT"]
     assert snapshots
     roles = [(m["role"], m.get("content")) for m in snapshots[-1]["messages"]]
@@ -126,13 +126,13 @@ def test_agui_stream_lifecycle(mock_agui_agent, test_client) -> None:
 
 
 def test_agui_no_raw_events(mock_agui_agent, test_client) -> None:
-    """RAW passthrough events are filtered out - they expose server-side internals."""
+    """RAW 透传事件会暴露服务端内部信息，因此应被过滤。"""
     events = collect_events(test_client, "/agui/model-agent/run", run_input())
     assert all(e["type"] != "RAW" for e in events)
 
 
 def test_agui_default_agent_route(mock_agui_agent, test_client) -> None:
-    """POST /agui/run falls back to the default agent."""
+    """POST /agui/run 应回退到默认 Agent。"""
     with patch("service.agui.get_agent", return_value=model_agent) as mock_get_agent:
         events = collect_events(test_client, "/agui/run", run_input())
     from agents import DEFAULT_AGENT
@@ -147,7 +147,7 @@ def test_agui_unknown_agent(mock_agui_agent, test_client) -> None:
 
 
 def test_agui_configurable_passthrough(mock_agui_agent, allow_fake_model, test_client) -> None:
-    """forwardedProps.configurable values reach the agent's configurable."""
+    """forwardedProps.configurable 的值应传递到 Agent 的 configurable。"""
     body = run_input(
         thread_id="passthrough-thread",
         forwardedProps={"configurable": {"model": "fake", "user_id": "user-123"}},
@@ -158,7 +158,7 @@ def test_agui_configurable_passthrough(mock_agui_agent, allow_fake_model, test_c
 
 
 def test_agui_records_thread_metadata(mock_agui_agent, test_client) -> None:
-    """AG-UI runs record user_id/agent_id so their threads are listed by /threads."""
+    """AG-UI 运行应记录 user_id 和 agent_id，使会话能被 /threads 列出。"""
     body = run_input(
         thread_id="metadata-thread",
         forwardedProps={"configurable": {"user_id": "user-123"}},
@@ -174,7 +174,7 @@ def test_agui_records_thread_metadata(mock_agui_agent, test_client) -> None:
 
 
 def test_agui_generates_user_id_when_missing(mock_agui_agent, test_client) -> None:
-    """Without a client-supplied user_id the run still records one, as /invoke does."""
+    """客户端未提供 user_id 时仍会记录一个，与 /invoke 的行为一致。"""
     collect_events(test_client, "/agui/model-agent/run", run_input(thread_id="anon-thread"))
 
     tup = model_agent.checkpointer.get_tuple(
@@ -199,7 +199,7 @@ def test_agui_configurable_wrong_type(mock_agui_agent, test_client) -> None:
 
 
 def test_agui_configurable_model_not_available(mock_agui_agent, test_client) -> None:
-    """A model outside the operator's AVAILABLE_MODELS allowlist is rejected before the run starts."""
+    """不在 AVAILABLE_MODELS 允许列表中的模型，应在运行开始前被拒绝。"""
     body = run_input(
         thread_id="model-not-available-thread",
         forwardedProps={"configurable": {"model": "not-a-real-model"}},
@@ -210,7 +210,7 @@ def test_agui_configurable_model_not_available(mock_agui_agent, test_client) -> 
 
 
 def test_agui_interrupt_and_resume(mock_agui_agent, test_client) -> None:
-    """An interrupt surfaces as an on_interrupt CUSTOM event and can be resumed."""
+    """中断应以 on_interrupt 自定义事件呈现，并且能够恢复。"""
     thread_id = "interrupt-thread"
     events = collect_events(test_client, "/agui/interrupt-agent/run", run_input(thread_id))
     assert events[-1]["type"] == "RUN_FINISHED"
@@ -218,7 +218,7 @@ def test_agui_interrupt_and_resume(mock_agui_agent, test_client) -> None:
     assert len(interrupts) == 1
     assert interrupts[0]["value"] == "What is your favorite color?"
 
-    # Resume the run with an answer
+    # 使用回答恢复本次运行
     resume_body = run_input(thread_id, messages=[], forwardedProps={"command": {"resume": "blue"}})
     events = collect_events(test_client, "/agui/interrupt-agent/run", resume_body)
     assert events[-1]["type"] == "RUN_FINISHED"
@@ -228,7 +228,7 @@ def test_agui_interrupt_and_resume(mock_agui_agent, test_client) -> None:
 
 
 def test_agui_auth(mock_settings, mock_agui_agent, test_client) -> None:
-    """The AG-UI endpoints enforce the same bearer auth as the rest of the service."""
+    """AG-UI 接口应使用与服务其他接口相同的 Bearer 认证。"""
     from pydantic import SecretStr
 
     mock_settings.AUTH_SECRET = SecretStr("test-secret")

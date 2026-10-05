@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class CustomData(BaseModel):
-    "Custom data being sent by an agent"
+    """Agent 发送的自定义数据。"""
 
     data: dict[str, Any] = Field(description="The custom data")
 

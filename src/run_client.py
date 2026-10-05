@@ -6,7 +6,7 @@ from schema import ChatMessage
 
 
 async def amain() -> None:
-    #### ASYNC ####
+    # ### 异步调用 ####
     client = AgentClient(settings.BASE_URL)
 
     print("Agent info:")
@@ -28,7 +28,7 @@ async def amain() -> None:
 
 
 def main() -> None:
-    #### SYNC ####
+    # ### 同步调用 ####
     client = AgentClient(settings.BASE_URL)
 
     print("Agent info:")

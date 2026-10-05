@@ -10,7 +10,7 @@ from schema import ChatMessage, StreamInput
 
 
 class FakeToolModel(FakeMessagesListChatModel):
-    """A fake model that supports tool calls."""
+    """支持工具调用的模拟模型。"""
 
     def __init__(self, responses: list[BaseMessage]):
         super().__init__(responses=responses)
@@ -35,10 +35,8 @@ async def test_three_layer_supervisor_hierarchy_agent_with_fake_model():
         AIMessage(
             content="", tool_calls=[ToolCall(name="add", args={"a": 2, "b": 3}, id="call-3")]
         ),
-        AIMessage(content="2+3 is 5"),  # This is the response from the math expert,
-        AIMessage(
-            content="The Maths Expert says the answer is 5."
-        ),  # This is the response from the research expert
+        AIMessage(content="2+3 is 5"),  # 这是数学专家的响应
+        AIMessage(content="The Maths Expert says the answer is 5."),  # 这是研究专家的响应
         AIMessage(content="The result is 5."),
     ]
 
@@ -53,7 +51,7 @@ async def test_three_layer_supervisor_hierarchy_agent_with_fake_model():
         async for chunk in message_generator(
             StreamInput(message="Add 2 and 3"), agent_id="langgraph-supervisor-hierarchy-agent"
         ):
-            if chunk and chunk.strip() != "data: [DONE]":  # Skip [DONE] message
+            if chunk and chunk.strip() != "data: [DONE]":  # 跳过 [DONE] 消息
                 chat_message = json.loads(chunk.lstrip("data: "))["content"]
                 messages.append(ChatMessage.model_validate(chat_message))
 

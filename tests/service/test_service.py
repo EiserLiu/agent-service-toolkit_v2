@@ -29,22 +29,22 @@ def test_invoke(test_client, mock_agent) -> None:
 
 
 def test_invoke_custom_agent(test_client, mock_agent) -> None:
-    """Test that /invoke works with a custom agent_id path parameter."""
+    """测试 /invoke 是否支持自定义 agent_id 路径参数。"""
     CUSTOM_AGENT = "custom_agent"
     QUESTION = "What is the weather in Tokyo?"
     CUSTOM_ANSWER = "The weather in Tokyo is sunny."
     DEFAULT_ANSWER = "This is from the default agent."
 
-    # Create a separate mock for the default agent
+    # 为默认 Agent 创建独立的模拟对象
     default_mock = AsyncMock()
     default_mock.ainvoke.return_value = [
         ("values", {"messages": [AIMessage(content=DEFAULT_ANSWER)]})
     ]
 
-    # Configure our custom mock agent
+    # 配置自定义模拟 Agent
     mock_agent.ainvoke.return_value = [("values", {"messages": [AIMessage(content=CUSTOM_ANSWER)]})]
 
-    # Patch get_agent to return the correct agent based on the provided agent_id
+    # 替换 get_agent，使其根据传入的 agent_id 返回正确的 Agent
     def agent_lookup(agent_id):
         if agent_id == CUSTOM_AGENT:
             return mock_agent
@@ -54,7 +54,7 @@ def test_invoke_custom_agent(test_client, mock_agent) -> None:
         response = test_client.post(f"/{CUSTOM_AGENT}/invoke", json={"message": QUESTION})
         assert response.status_code == 200
 
-        # Verify custom agent was called and default wasn't
+        # 验证调用了自定义 Agent，而未调用默认 Agent
         mock_agent.ainvoke.assert_awaited_once()
         default_mock.ainvoke.assert_not_awaited()
 
@@ -63,11 +63,11 @@ def test_invoke_custom_agent(test_client, mock_agent) -> None:
 
         output = ChatMessage.model_validate(response.json())
         assert output.type == "ai"
-        assert output.content == CUSTOM_ANSWER  # Verify we got the custom agent's response
+        assert output.content == CUSTOM_ANSWER  # 验证收到自定义 Agent 的响应
 
 
 def test_invoke_model_param(test_client, mock_agent) -> None:
-    """Test that the model parameter is correctly passed to the agent if specified."""
+    """测试指定 model 参数后是否正确传递给 Agent。"""
     QUESTION = "What is the weather in Tokyo?"
     ANSWER = "The weather in Tokyo is sunny."
     CUSTOM_MODEL = OpenAIModelName.GPT_5_MINI
@@ -76,50 +76,50 @@ def test_invoke_model_param(test_client, mock_agent) -> None:
     response = test_client.post("/invoke", json={"message": QUESTION, "model": CUSTOM_MODEL})
     assert response.status_code == 200
 
-    # Verify the model was passed correctly in the config
+    # 验证模型已通过配置正确传递
     mock_agent.ainvoke.assert_awaited_once()
     config = mock_agent.ainvoke.await_args.kwargs["config"]
     assert config["configurable"]["model"] == CUSTOM_MODEL
 
-    # Verify the response is still correct
+    # 验证响应仍然正确
     output = ChatMessage.model_validate(response.json())
     assert output.type == "ai"
     assert output.content == ANSWER
 
-    # Verify a valid enum outside the configured allowlist returns a 400.
+    # 验证枚举值有效但不在允许列表中的模型会返回 400。
     unavailable_model = AnthropicModelName.SONNET_45
     response = test_client.post("/invoke", json={"message": QUESTION, "model": unavailable_model})
     assert response.status_code == 400
     assert "not available" in response.json()["detail"]
 
-    # Verify a malformed model string still fails request validation.
+    # 验证格式错误的模型字符串仍会触发请求校验失败。
     INVALID_MODEL = "gpt-7-notreal"
     response = test_client.post("/invoke", json={"message": QUESTION, "model": INVALID_MODEL})
     assert response.status_code == 422
 
 
 def test_invoke_no_model_param_uses_none_default(test_client, mock_agent) -> None:
-    """Test that when no model is specified, UserInput defaults to None and isn't passed to the runnable config (not hardcoded gpt-5-nano)."""
+    """测试未指定模型时，UserInput 默认为 None 且不向运行配置传递该字段，而非硬编码为 gpt-5-nano。"""
     QUESTION = "What is the weather in Tokyo?"
     ANSWER = "The weather in Tokyo is sunny."
     mock_agent.ainvoke.return_value = [("values", {"messages": [AIMessage(content=ANSWER)]})]
 
-    # Don't specify model in the request
+    # 请求中不指定模型
     response = test_client.post("/invoke", json={"message": QUESTION})
     assert response.status_code == 200
 
     mock_agent.ainvoke.assert_awaited_once()
     config = mock_agent.ainvoke.await_args.kwargs["config"]
-    assert "model" not in config["configurable"]  # Should not be present when None
+    assert "model" not in config["configurable"]  # 值为 None 时不应传入
 
-    # Verify the response is still correct
+    # 验证响应仍然正确
     output = ChatMessage.model_validate(response.json())
     assert output.type == "ai"
     assert output.content == ANSWER
 
 
 def test_invoke_custom_agent_config(test_client, mock_agent) -> None:
-    """Test that the agent_config parameter is correctly passed to the agent."""
+    """测试 agent_config 参数是否正确传递给 Agent。"""
     QUESTION = "What is the weather in Tokyo?"
     ANSWER = "The weather in Tokyo is sunny."
     CUSTOM_CONFIG = {"spicy_level": 0.1, "additional_param": "value_foo"}
@@ -131,18 +131,18 @@ def test_invoke_custom_agent_config(test_client, mock_agent) -> None:
     )
     assert response.status_code == 200
 
-    # Verify the agent_config was passed correctly in the config
+    # 验证 agent_config 已通过配置正确传递
     mock_agent.ainvoke.assert_awaited_once()
     config = mock_agent.ainvoke.await_args.kwargs["config"]
     assert config["configurable"]["spicy_level"] == 0.1
     assert config["configurable"]["additional_param"] == "value_foo"
 
-    # Verify the response is still correct
+    # 验证响应仍然正确
     output = ChatMessage.model_validate(response.json())
     assert output.type == "ai"
     assert output.content == ANSWER
 
-    # Verify a reserved key in agent_config throws a validation error
+    # 验证 agent_config 中存在保留键时会触发校验错误
     INVALID_CONFIG = {"model": "gpt-5-nano"}
     response = test_client.post(
         "/invoke", json={"message": QUESTION, "agent_config": INVALID_CONFIG}
@@ -219,7 +219,7 @@ def test_history(test_client, mock_agent) -> None:
 
 
 def test_history_custom_agent(test_client) -> None:
-    """Test that /{agent_id}/history reads the thread through the requested agent's graph."""
+    """测试 /{agent_id}/history 是否使用请求指定的 Agent 图读取会话。"""
     CUSTOM_AGENT = "custom_agent"
     QUESTION = "What is the weather in Tokyo?"
     ANSWER = "The weather in Tokyo is 70 degrees."
@@ -234,7 +234,7 @@ def test_history_custom_agent(test_client) -> None:
         tasks=(),
         interrupts=(),
     )
-    # The default agent's graph doesn't know about this thread, so it returns no messages.
+    # 默认 Agent 的图不包含此会话，因此返回空消息列表。
     default_snapshot = StateSnapshot(
         values={"messages": []},
         next=(),
@@ -265,7 +265,7 @@ def test_history_custom_agent(test_client) -> None:
         )
         assert response.status_code == 200
 
-        # The custom agent's graph was used, not the default one.
+        # 实际使用了自定义 Agent 的图，而非默认图。
         custom_mock.aget_state.assert_awaited_once()
         default_mock.aget_state.assert_not_awaited()
 
@@ -278,12 +278,12 @@ def test_history_custom_agent(test_client) -> None:
 
 @pytest.mark.asyncio
 async def test_stream(test_client, mock_agent) -> None:
-    """Test streaming tokens and messages."""
+    """测试 token 和消息的流式输出。"""
     QUESTION = "What is the weather in Tokyo?"
     TOKENS = ["The", " weather", " in", " Tokyo", " is", " sunny", "."]
     FINAL_ANSWER = "The weather in Tokyo is sunny."
 
-    # Configure mock to use our async iterator function
+    # 配置模拟对象，使其使用我们的异步迭代器函数
     events = [
         (
             "messages",
@@ -306,25 +306,25 @@ async def test_stream(test_client, mock_agent) -> None:
 
     mock_agent.astream = mock_astream
 
-    # Make request with streaming
+    # 发送流式请求
     with test_client.stream(
         "POST", "/stream", json={"message": QUESTION, "stream_tokens": True}
     ) as response:
         assert response.status_code == 200
 
-        # Collect all SSE messages
+        # 收集所有 SSE 消息
         messages = []
         for line in response.iter_lines():
-            if line and line.strip() != "data: [DONE]":  # Skip [DONE] message
+            if line and line.strip() != "data: [DONE]":  # 跳过 [DONE] 消息
                 messages.append(json.loads(line.lstrip("data: ")))
 
-        # Verify streamed tokens
+        # 验证流式 token
         token_messages = [msg for msg in messages if msg["type"] == "token"]
         assert len(token_messages) == len(TOKENS)
         for i, msg in enumerate(token_messages):
             assert msg["content"] == TOKENS[i]
 
-        # Verify final message
+        # 验证最终消息
         final_messages = [msg for msg in messages if msg["type"] == "message"]
         assert len(final_messages) == 1
         assert final_messages[0]["content"]["content"] == FINAL_ANSWER
@@ -333,12 +333,12 @@ async def test_stream(test_client, mock_agent) -> None:
 
 @pytest.mark.asyncio
 async def test_stream_no_tokens(test_client, mock_agent) -> None:
-    """Test streaming without tokens."""
+    """测试不包含 token 的流式输出。"""
     QUESTION = "What is the weather in Tokyo?"
     TOKENS = ["The", " weather", " in", " Tokyo", " is", " sunny", "."]
     FINAL_ANSWER = "The weather in Tokyo is sunny."
 
-    # Configure mock to use our async iterator function
+    # 配置模拟对象，使其使用我们的异步迭代器函数
     events = [
         (
             "messages",
@@ -361,23 +361,23 @@ async def test_stream_no_tokens(test_client, mock_agent) -> None:
 
     mock_agent.astream = mock_astream
 
-    # Make request with streaming disabled
+    # 发送禁用 token 流式输出的请求
     with test_client.stream(
         "POST", "/stream", json={"message": QUESTION, "stream_tokens": False}
     ) as response:
         assert response.status_code == 200
 
-        # Collect all SSE messages
+        # 收集所有 SSE 消息
         messages = []
         for line in response.iter_lines():
-            if line and line.strip() != "data: [DONE]":  # Skip [DONE] message
+            if line and line.strip() != "data: [DONE]":  # 跳过 [DONE] 消息
                 messages.append(json.loads(line.lstrip("data: ")))
 
-        # Verify no token messages
+        # 验证没有 token 消息
         token_messages = [msg for msg in messages if msg["type"] == "token"]
         assert len(token_messages) == 0
 
-        # Verify final message
+        # 验证最终消息
         assert len(messages) == 1
         assert messages[0]["type"] == "message"
         assert messages[0]["content"]["content"] == FINAL_ANSWER
@@ -387,7 +387,7 @@ async def test_stream_no_tokens(test_client, mock_agent) -> None:
 def test_stream_interrupt(test_client, mock_agent) -> None:
     QUESTION = "What is the weather in Tokyo?"
     INTERRUPT = "Confirm weather check"
-    # Configure mock to use our async iterator function
+    # 配置模拟对象，使其使用我们的异步迭代器函数
     events = [
         (
             "updates",
@@ -401,26 +401,26 @@ def test_stream_interrupt(test_client, mock_agent) -> None:
 
     mock_agent.astream = mock_astream
 
-    # Make request with streaming disabled
+    # 发送禁用 token 流式输出的请求
     with test_client.stream(
         "POST", "/stream", json={"message": QUESTION, "stream_tokens": False}
     ) as response:
         assert response.status_code == 200
 
-        # Collect all SSE messages
+        # 收集所有 SSE 消息
         messages = []
         for line in response.iter_lines():
-            if line and line.strip() != "data: [DONE]":  # Skip [DONE] message
+            if line and line.strip() != "data: [DONE]":  # 跳过 [DONE] 消息
                 messages.append(json.loads(line.lstrip("data: ")))
 
-        # Verify interrupt message
+        # 验证中断消息
         assert len(messages) == 1
         assert messages[0]["content"]["content"] == INTERRUPT
         assert messages[0]["content"]["type"] == "ai"
 
 
 def test_info(test_client, mock_settings) -> None:
-    """Test that /info returns the correct service metadata."""
+    """测试 /info 是否返回正确的服务元数据。"""
 
     base_agent = Agent(description="A base agent.", graph_like=None)
     mock_settings.AUTH_SECRET = None

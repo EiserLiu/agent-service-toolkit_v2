@@ -10,7 +10,7 @@ from schema.models import OpenAIModelName
 
 
 def test_app_simple_non_streaming(mock_agent_client):
-    """Test the full app - happy path"""
+    """测试整个应用的正常流程。"""
     at = AppTest.from_file("../../src/streamlit_app.py").run()
 
     WELCOME_START = "Hello! I'm an AI agent. Ask me anything!"
@@ -24,7 +24,7 @@ def test_app_simple_non_streaming(mock_agent_client):
     assert at.chat_message[0].avatar == "assistant"
     assert at.chat_message[0].markdown[0].value.startswith(WELCOME_START)
 
-    at.sidebar.toggle[0].set_value(False)  # Use Streaming = False
+    at.sidebar.toggle[0].set_value(False)  # 关闭流式输出
     at.chat_input[0].set_value(PROMPT).run()
     print(at)
     assert at.chat_message[0].avatar == "user"
@@ -35,7 +35,7 @@ def test_app_simple_non_streaming(mock_agent_client):
 
 
 def test_app_settings(mock_agent_client):
-    """Test the full app - happy path"""
+    """测试整个应用的正常流程。"""
     at = AppTest.from_file("../../src/streamlit_app.py")
     at.query_params["user_id"] = "1234"
     at.run()
@@ -47,7 +47,7 @@ def test_app_settings(mock_agent_client):
         return_value=ChatMessage(type="ai", content=RESPONSE),
     )
 
-    at.sidebar.toggle[0].set_value(False)  # Use Streaming = False
+    at.sidebar.toggle[0].set_value(False)  # 关闭流式输出
     assert at.sidebar.selectbox[0].value == "gpt-5-nano"
     assert mock_agent_client.agent == "test-agent"
     at.sidebar.selectbox[0].set_value("gpt-5-mini")
@@ -55,13 +55,13 @@ def test_app_settings(mock_agent_client):
     at.chat_input[0].set_value(PROMPT).run()
     print(at)
 
-    # Basic checks
+    # 基础检查
     assert at.chat_message[0].avatar == "user"
     assert at.chat_message[0].markdown[0].value == PROMPT
     assert at.chat_message[1].avatar == "assistant"
     assert at.chat_message[1].markdown[0].value == RESPONSE
 
-    # Check the args match the settings
+    # 检查参数是否与设置一致
     assert mock_agent_client.agent == "chatbot"
     mock_agent_client.ainvoke.assert_called_with(
         message=PROMPT,
@@ -73,11 +73,11 @@ def test_app_settings(mock_agent_client):
 
 
 def test_app_thread_id_history(mock_agent_client):
-    """Test the thread_id is generated"""
+    """测试是否生成 thread_id。"""
 
     at = AppTest.from_file("../../src/streamlit_app.py").run()
 
-    # Reset and set thread_id
+    # 重置并设置 thread_id
     at = AppTest.from_file("../../src/streamlit_app.py")
     at.query_params["thread_id"] = "1234"
     HISTORY = [
@@ -88,7 +88,7 @@ def test_app_thread_id_history(mock_agent_client):
     at.run()
     print(at)
     assert at.session_state.thread_id == "1234"
-    # No agent in the URL, so history is read through the client's selected agent.
+    # URL 中没有指定 Agent，因此使用客户端选中的 Agent 读取历史。
     mock_agent_client.get_history.assert_called_with(thread_id="1234", agent="test-agent")
     assert at.chat_message[0].avatar == "user"
     assert at.chat_message[0].markdown[0].value == "What is the weather?"
@@ -98,7 +98,7 @@ def test_app_thread_id_history(mock_agent_client):
 
 
 def test_app_resume_with_agent_param(mock_agent_client):
-    """An ?agent= URL param scopes the resumed history to that agent's graph."""
+    """URL 中的 ?agent= 参数应使历史恢复使用对应 Agent 的图。"""
 
     at = AppTest.from_file("../../src/streamlit_app.py")
     at.query_params["thread_id"] = "1234"
@@ -111,7 +111,7 @@ def test_app_resume_with_agent_param(mock_agent_client):
     at.run()
     print(at)
     assert at.session_state.thread_id == "1234"
-    # History is fetched through the agent named in the URL, not the default.
+    # 通过 URL 中指定的 Agent 获取历史，而不是默认 Agent。
     mock_agent_client.get_history.assert_called_with(thread_id="1234", agent="chatbot")
     assert at.chat_message[0].markdown[0].value == "What is the weather?"
     assert at.chat_message[1].markdown[0].value == "The weather is sunny."
@@ -119,17 +119,17 @@ def test_app_resume_with_agent_param(mock_agent_client):
 
 
 def test_app_feedback(mock_agent_client):
-    """TODO: Can't figure out how to interact with st.feedback"""
+    """TODO：尚未找到与 st.feedback 交互的方法。"""
 
     pass
 
 
 @pytest.mark.asyncio
 async def test_app_streaming(mock_agent_client):
-    """Test the app with streaming enabled - including tool messages"""
+    """测试启用流式输出的应用，包括工具消息。"""
     at = AppTest.from_file("../../src/streamlit_app.py").run()
 
-    # Setup mock streaming response
+    # 设置模拟流式响应
     PROMPT = "What is 6 * 7?"
     ai_with_tool = ChatMessage(
         type="ai",
@@ -147,7 +147,7 @@ async def test_app_streaming(mock_agent_client):
 
     mock_agent_client.astream = Mock(return_value=amessage_iter())
 
-    at.toggle[0].set_value(True)  # Use Streaming = True
+    at.toggle[0].set_value(True)  # 启用流式输出
     at.chat_input[0].set_value(PROMPT).run()
     print(at)
 
@@ -168,14 +168,14 @@ async def test_app_streaming(mock_agent_client):
 
 @pytest.mark.asyncio
 async def test_app_init_error(mock_agent_client):
-    """Test the app with an error in the agent initialization"""
+    """测试 Agent 初始化出错时的应用行为。"""
     at = AppTest.from_file("../../src/streamlit_app.py").run()
 
-    # Setup mock streaming response
+    # 设置模拟流式响应
     PROMPT = "What is 6 * 7?"
     mock_agent_client.astream.side_effect = AgentClientError("Error connecting to agent")
 
-    at.toggle[0].set_value(True)  # Use Streaming = True
+    at.toggle[0].set_value(True)  # 启用流式输出
     at.chat_input[0].set_value(PROMPT).run()
     print(at)
 
@@ -198,10 +198,10 @@ def test_app_new_chat_btn(mock_agent_client):
 
 @pytest.fixture
 def multi_agent_messages():
-    """Fixture providing reusable messages for multi-agent tests"""
+    """为多 Agent 测试提供可复用消息的测试夹具。"""
     from schema import ChatMessage
 
-    # tool 1
+    # 工具 1
     tool_1 = ChatMessage(
         type="ai",
         content="Starting tool 1...",
@@ -209,7 +209,7 @@ def multi_agent_messages():
     )
     tool_1_result = ChatMessage(type="tool", content="Tool 1 complete", tool_call_id="tool-1")
 
-    # tool 2
+    # 工具 2
     tool_2 = ChatMessage(
         type="ai",
         content="Starting tool 2...",
@@ -217,7 +217,7 @@ def multi_agent_messages():
     )
     tool_2_result = ChatMessage(type="tool", content="Tool 2 complete", tool_call_id="tool-2")
 
-    # Transfer to agent A
+    # 将控制权交给 Agent A
     transfer_a = ChatMessage(
         type="ai",
         content="Transferring to agent A...",
@@ -231,7 +231,7 @@ def multi_agent_messages():
         tool_call_id="transfer-a",
     )
 
-    # Agent A transfers to agent B (sub-agent)
+    # Agent A 将控制权交给子 Agent B
     transfer_b_from_a = ChatMessage(
         type="ai",
         content="Agent A delegating to agent B...",
@@ -245,7 +245,7 @@ def multi_agent_messages():
         tool_call_id="transfer-a-b",
     )
 
-    # Agent B transfers back to A
+    # Agent B 将控制权交还给 A
     transfer_back_b = ChatMessage(
         type="ai",
         content="Agent B finished.",
@@ -259,7 +259,7 @@ def multi_agent_messages():
         tool_call_id="back-b-a",
     )
 
-    # Agent A transfers back to supervisor
+    # Agent A 将控制权交还给主管 Agent
     transfer_back_a = ChatMessage(
         type="ai",
         content="Agent A finished.",
@@ -277,7 +277,7 @@ def multi_agent_messages():
         tool_call_id="back-a-super",
     )
 
-    # Supervisor continues and transfers to agent C (sibling to A)
+    # 主管继续执行，并将控制权交给 Agent C（与 A 同级）
     supervisor_continues = ChatMessage(
         type="ai",
         content="Now transferring to agent C...",
@@ -291,7 +291,7 @@ def multi_agent_messages():
         tool_call_id="transfer-c",
     )
 
-    # Agent C transfers back
+    # Agent C 交还控制权
     transfer_back_c = ChatMessage(
         type="ai",
         content="Agent C finished.",
@@ -309,7 +309,7 @@ def multi_agent_messages():
         tool_call_id="back-c-super",
     )
 
-    # Final response
+    # 最终响应
     supervisor_final = ChatMessage(
         type="ai", content="All agents have completed their tasks successfully."
     )
@@ -337,14 +337,14 @@ def multi_agent_messages():
 
 @pytest.mark.asyncio
 async def test_app_streaming_single_sub_agent(mock_agent_client, multi_agent_messages):
-    """Test a single sub-agent with multiple tool calls to verify popover functionality"""
+    """测试单个子 Agent 的多次工具调用，验证弹出面板功能。"""
 
     at = AppTest.from_file("../../src/streamlit_app.py").run()
 
     PROMPT = "Test single sub-agent with multiple tools"
 
-    # Use the fixture and include multiple work tools to test multiple popovers
-    # Supervisor -> Agent A (with tool_1 and tool_2) -> Supervisor
+    # 使用测试夹具并包含多个工作工具，以测试多个弹出面板
+    # 主管 Agent → Agent A（调用 tool_1 和 tool_2）→ 主管 Agent
     messages = multi_agent_messages
 
     async def amessage_iter():
@@ -407,13 +407,13 @@ async def test_app_streaming_single_sub_agent(mock_agent_client, multi_agent_mes
 
 @pytest.mark.asyncio
 async def test_app_streaming_sequential_sub_agents(mock_agent_client, multi_agent_messages):
-    """Test when the supervisor agent transfers to sub agent A, then back to supervisor, then transfers to sub agent C, and back again"""
+    """测试主管将控制权交给子 Agent A、收回后再交给子 Agent C，并再次收回的流程。"""
 
     at = AppTest.from_file("../../src/streamlit_app.py").run()
 
     PROMPT = "Test multiple transfer back patterns"
 
-    # Create message flow for sequential agents: Supervisor -> Agent A (using tool 1) -> Supervisor -> Agent C (using tool 2) -> Supervisor
+    # 创建顺序执行的消息流：主管 → Agent A（工具 1）→ 主管 → Agent C（工具 2）→ 主管
     messages = multi_agent_messages
 
     async def amessage_iter():
@@ -452,7 +452,7 @@ async def test_app_streaming_sequential_sub_agents(mock_agent_client, multi_agen
     assert status_a.children[0].value == "Starting tool 1...", (
         "First child of status should be tool 1 message"
     )
-    # Second child of status should be the popover for the first tool call
+    # 状态容器的第二个子元素应为第一次工具调用的弹出面板
     popover_a = status_a.children[1]
     assert popover_a.type == "popover"
     assert popover_a.proto.popover.label == "do_work_1"
@@ -497,13 +497,13 @@ async def test_app_streaming_sequential_sub_agents(mock_agent_client, multi_agen
 
 @pytest.mark.asyncio
 async def test_app_streaming_nested_sub_agents(mock_agent_client, multi_agent_messages):
-    """Test nested sub-agents where agent B is a sub-agent of agent A"""
+    """测试嵌套子 Agent，其中 B 是 A 的子 Agent。"""
 
     at = AppTest.from_file("../../src/streamlit_app.py").run()
 
     PROMPT = "Test nested sub-agents"
 
-    # Create message flow for nested sub-agents: Supervisor -> Agent A (using tool 1) -> Agent B (using tool 2) -> Agent A -> Supervisor
+    # 创建嵌套子 Agent 消息流：主管 → Agent A（工具 1）→ Agent B（工具 2）→ Agent A → 主管
     messages = multi_agent_messages
 
     async def amessage_iter():
@@ -542,7 +542,7 @@ async def test_app_streaming_nested_sub_agents(mock_agent_client, multi_agent_me
     assert status_a.children[0].value == "Starting tool 1...", (
         "First child of status should be tool 1 message"
     )
-    # Second child of status should be the popover for the first tool call
+    # 状态容器的第二个子元素应为第一次工具调用的弹出面板
     popover_a = status_a.children[1]
     assert popover_a.type == "popover"
     assert popover_a.proto.popover.label == "do_work_1"
@@ -557,14 +557,14 @@ async def test_app_streaming_nested_sub_agents(mock_agent_client, multi_agent_me
         "Third child of status should be transfer message to agent B"
     )
 
-    # Fourth child of status should be the nested status for Agent B
+    # 状态容器的第四个子元素应为 Agent B 的嵌套状态容器
     nested_status_b = status_a.children[3]
     assert "transfer_to_agent_b" in nested_status_b.label
 
     assert nested_status_b.children[0].value == "Starting tool 2...", (
         "First child of nested status should be tool 2 message"
     )
-    # Second child of nested status should be the popover for task 2 tool call
+    # 嵌套状态容器的第二个子元素应为任务 2 工具调用的弹出面板
     popover_b = nested_status_b.children[1]
     assert popover_b.type == "popover"
     assert popover_b.proto.popover.label == "do_work_2"
@@ -588,7 +588,7 @@ async def test_app_streaming_nested_sub_agents(mock_agent_client, multi_agent_me
 
 @pytest.fixture
 def mock_threads_data():
-    """Fixture providing dummy thread data for caching tests."""
+    """为缓存测试提供模拟会话数据的测试夹具。"""
     return UserThreads(
         threads=[
             ThreadSummary(
@@ -602,7 +602,7 @@ def mock_threads_data():
 
 
 def test_app_thread_caching_sidebar(mock_agent_client, mock_threads_data):
-    """Verify thread list is fetched via get_user_threads and rendered in sidebar history."""
+    """验证通过 get_user_threads 获取会话列表，并在侧边栏历史中渲染。"""
     mock_agent_client.get_user_threads = Mock(return_value=mock_threads_data)
 
     at = AppTest.from_file("../../src/streamlit_app.py")
@@ -619,7 +619,7 @@ def test_app_thread_caching_sidebar(mock_agent_client, mock_threads_data):
 
 
 def test_app_thread_click_loads_history(mock_agent_client, mock_threads_data):
-    """Verify clicking a sidebar thread loads that conversation into the chat."""
+    """验证点击侧边栏会话后，将对应对话加载到聊天区。"""
     mock_agent_client.get_user_threads = Mock(return_value=mock_threads_data)
     mock_agent_client.get_history = Mock(
         return_value=ChatHistory(
@@ -648,7 +648,7 @@ def test_app_thread_click_loads_history(mock_agent_client, mock_threads_data):
 
 
 def test_app_thread_click_history_error(mock_agent_client, mock_threads_data):
-    """Verify a failed history fetch surfaces an error and leaves the current chat alone."""
+    """验证历史查询失败时显示错误，并保留当前聊天内容。"""
     mock_agent_client.get_user_threads = Mock(return_value=mock_threads_data)
     mock_agent_client.get_history = Mock(side_effect=AgentClientError("service down"))
 
@@ -665,7 +665,7 @@ def test_app_thread_click_history_error(mock_agent_client, mock_threads_data):
 
 
 def test_app_thread_fetch_error_shows_caption(mock_agent_client):
-    """Verify the sidebar degrades gracefully when the threads endpoint fails."""
+    """验证会话列表接口失败时，侧边栏能够平稳降级。"""
     mock_agent_client.get_user_threads = Mock(side_effect=AgentClientError("service down"))
 
     at = AppTest.from_file("../../src/streamlit_app.py")

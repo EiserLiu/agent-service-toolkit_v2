@@ -7,12 +7,12 @@ from core.settings import settings
 
 
 def get_sqlite_saver() -> AbstractAsyncContextManager[AsyncSqliteSaver]:
-    """Initialize and return a SQLite saver instance."""
+    """初始化并返回 SQLite 保存器实例。"""
     return AsyncSqliteSaver.from_conn_string(settings.SQLITE_DB_PATH)
 
 
 class AsyncInMemoryStore:
-    """Wrapper for InMemoryStore that provides an async context manager interface."""
+    """为 InMemoryStore 提供异步上下文管理器接口的封装。"""
 
     def __init__(self):
         self.store = InMemoryStore()
@@ -21,20 +21,20 @@ class AsyncInMemoryStore:
         return self.store
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # No cleanup needed for InMemoryStore
+        # InMemoryStore 无需清理
         pass
 
     async def setup(self):
-        # No-op method for compatibility with PostgresStore
+        # 为兼容 PostgresStore 提供的空操作方法
         pass
 
 
 @asynccontextmanager
 async def get_sqlite_store():
-    """Initialize and return a store instance for long-term memory.
+    """初始化并返回长期记忆存储实例。
 
-    Note: SQLite-specific store isn't available in LangGraph,
-    so we use InMemoryStore wrapped in an async context manager for compatibility.
+    注意：LangGraph 未提供 SQLite 专用的存储组件，
+    因此使用异步上下文管理器封装 InMemoryStore，以保持接口兼容。
     """
     store_manager = AsyncInMemoryStore()
     yield await store_manager.__aenter__()

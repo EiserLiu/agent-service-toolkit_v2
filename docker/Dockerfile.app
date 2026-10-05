@@ -9,9 +9,9 @@ COPY pyproject.toml .
 COPY uv.lock .
 RUN pip install --no-cache-dir uv==0.12.5
 
-# Install only the dependencies needed for the client application
-# --frozen: Use exact versions from the lock file
-# --only-group client: Only install dependencies marked as part of the "client" group in pyproject.toml
+# 仅安装客户端应用所需的依赖
+# --frozen：严格使用锁文件中的版本
+# --only-group client：仅安装 pyproject.toml 中属于 "client" 组的依赖
 RUN uv sync --frozen --only-group client
 
 COPY src/client/ ./client/

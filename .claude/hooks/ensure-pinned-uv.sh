@@ -1,11 +1,11 @@
 #!/bin/bash
-# Pin the sandbox's uv to the repo's version. The relative `exclude-newer`
-# cooldown in pyproject.toml needs a recent uv; an older uv silently drops the
-# cooldown metadata from uv.lock on any re-lock (which `uv run`/`uv sync` can
-# trigger). Installs from PyPI with the same `pip install uv==` method the
-# Dockerfiles use, and derives the version from them so there's no extra copy to
-# keep in sync. Only touches the managed remote sandbox -- never a local dev's
-# uv install.
+# 将沙箱中的 uv 固定为仓库指定版本。pyproject.toml 中相对时间形式的
+# `exclude-newer` 冷却期需要较新的 uv；旧版本在重新生成锁文件时，
+# 会静默删除 uv.lock 中的冷却期元数据（`uv run` / `uv sync` 也可能
+# 触发此操作）。使用与 Dockerfile 相同的 `pip install uv==` 方式
+# 从 PyPI 安装，并从 Dockerfile 获取版本号，避免额外维护一份
+# 版本配置。仅修改托管远程沙箱中的 uv，
+# 不会修改本地开发者安装的 uv。
 set -uo pipefail
 
 [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || exit 0

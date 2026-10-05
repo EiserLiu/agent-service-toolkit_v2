@@ -8,7 +8,7 @@ from schema.models import AllModelEnum, AnthropicModelName, OpenAIModelName
 
 
 class AgentInfo(BaseModel):
-    """Info about an available agent."""
+    """可用 Agent 的信息。"""
 
     key: str = Field(
         description="Agent key.",
@@ -21,7 +21,7 @@ class AgentInfo(BaseModel):
 
 
 class ServiceMetadata(BaseModel):
-    """Metadata about the service including available agents and models."""
+    """服务元数据，包括可用的 Agent 和模型。"""
 
     agents: list[AgentInfo] = Field(
         description="List of available agents.",
@@ -39,7 +39,7 @@ class ServiceMetadata(BaseModel):
 
 
 class UserInput(BaseModel):
-    """Basic user input for the agent."""
+    """发送给 Agent 的基本用户输入。"""
 
     message: str = Field(
         description="User input to the agent.",
@@ -69,7 +69,7 @@ class UserInput(BaseModel):
 
 
 class StreamInput(UserInput):
-    """User input for streaming the agent's response."""
+    """用于流式获取 Agent 响应的用户输入。"""
 
     stream_tokens: bool = Field(
         description="Whether to stream LLM tokens to the client.",
@@ -78,7 +78,7 @@ class StreamInput(UserInput):
 
 
 class ToolCall(TypedDict):
-    """Represents a request to call a tool."""
+    """表示一次工具调用请求。"""
 
     name: str
     """The name of the tool to be called."""
@@ -90,7 +90,7 @@ class ToolCall(TypedDict):
 
 
 class ChatMessage(BaseModel):
-    """Message in a chat."""
+    """聊天中的一条消息。"""
 
     type: Literal["human", "ai", "tool", "custom"] = Field(
         description="Role of the message.",
@@ -124,7 +124,7 @@ class ChatMessage(BaseModel):
     )
 
     def pretty_repr(self) -> str:
-        """Get a pretty representation of the message."""
+        """获取便于阅读的消息表示。"""
         base_title = self.type.title() + " Message"
         padded = " " + base_title + " "
         sep_len = (80 - len(padded)) // 2
@@ -138,7 +138,7 @@ class ChatMessage(BaseModel):
 
 
 class Feedback(BaseModel):  # type: ignore[no-redef]
-    """Feedback for a run, to record to LangSmith."""
+    """一次运行的反馈，用于记录到 LangSmith。"""
 
     run_id: str = Field(
         description="Run ID to record feedback for.",
@@ -164,7 +164,7 @@ class FeedbackResponse(BaseModel):
 
 
 class ChatHistoryInput(BaseModel):
-    """Input for retrieving chat history."""
+    """查询聊天历史的输入。"""
 
     thread_id: str = Field(
         description="Thread ID to persist and continue a multi-turn conversation.",
@@ -177,7 +177,7 @@ class ChatHistory(BaseModel):
 
 
 class UserThreadsInput(BaseModel):
-    """Input for listing a user's conversation threads."""
+    """列出用户会话的输入。"""
 
     user_id: str = Field(
         description="User ID to list threads for.",
@@ -192,7 +192,7 @@ class UserThreadsInput(BaseModel):
 
 
 class ThreadSummary(BaseModel):
-    """Summary of a single conversation thread."""
+    """单个会话的摘要。"""
 
     thread_id: str = Field(
         description="Thread ID of the conversation.",

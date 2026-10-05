@@ -7,7 +7,7 @@ from langchain_chroma import Chroma
 from langchain_community.document_loaders import Docx2txtLoader, PyPDFLoader
 from langchain_openai import OpenAIEmbeddings
 
-# Load environment variables from the .env file
+# 从 .env 文件加载环境变量
 load_dotenv()
 
 
@@ -20,7 +20,7 @@ def create_chroma_db(
 ):
     embeddings = OpenAIEmbeddings(api_key=os.environ["OPENAI_API_KEY"])
 
-    # Initialize Chroma vector store
+    # 初始化 Chroma 向量存储
     if delete_chroma_db and os.path.exists(db_name):
         shutil.rmtree(db_name)
         print(f"Deleted existing database at {db_name}")
@@ -30,27 +30,27 @@ def create_chroma_db(
         persist_directory=f"./{db_name}",
     )
 
-    # Initialize text splitter
+    # 初始化文本分割器
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=overlap)
 
-    # Iterate over files in the folder
+    # 遍历文件夹中的文件
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
 
-        # Load document based on file extension
-        # Add more loaders if required, i.e. JSONLoader, TxtLoader, etc.
+        # 根据文件扩展名加载文档
+        # 按需添加其他加载器，例如 JSONLoader、TxtLoader 等
         if filename.endswith(".pdf"):
             loader = PyPDFLoader(file_path)
         elif filename.endswith(".docx"):
             loader = Docx2txtLoader(file_path)
         else:
-            continue  # Skip unsupported file types
+            continue  # 跳过不支持的文件类型
 
-        # Load and split document into chunks
+        # 加载文档并分割为文本块
         document = loader.load()
         chunks = text_splitter.split_documents(document)
 
-        # Add chunks to Chroma vector store
+        # 将文本块加入 Chroma 向量存储
         for chunk in chunks:
             chunk_id = chroma.add_documents([chunk])
             if chunk_id:
@@ -65,19 +65,19 @@ def create_chroma_db(
 
 
 if __name__ == "__main__":
-    # Path to the folder containing the documents
+    # 存放文档的文件夹路径
     folder_path = "./data"
 
-    # Create the Chroma database
+    # 创建 Chroma 数据库
     chroma = create_chroma_db(folder_path=folder_path)
 
-    # Create retriever from the Chroma database
+    # 从 Chroma 数据库创建检索器
     retriever = chroma.as_retriever(search_kwargs={"k": 3})
 
-    # Perform a similarity search
+    # 执行相似度搜索
     query = "What's my company's mission and values"
     similar_docs = retriever.invoke(query)
 
-    # Display results
+    # 显示结果
     for i, doc in enumerate(similar_docs, start=1):
         print(f"\n🔹 Result {i}:\n{doc.page_content}\nTags: {doc.metadata.get('source', [])}")

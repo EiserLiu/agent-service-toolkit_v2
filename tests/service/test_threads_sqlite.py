@@ -1,8 +1,8 @@
-"""Integration tests for /threads against a real SQLite checkpointer.
+"""使用真实 SQLite 检查点保存器测试 /threads 的集成行为。
 
-The unit tests in test_service.py drive a fake checkpointer, so they can't catch a
-metadata filter that the database rejects or a head-checkpoint assumption that LangGraph
-doesn't actually hold. These run real graphs through a real checkpointer instead.
+使用模拟检查点保存器的单元测试，无法发现数据库不接受的元数据过滤条件，
+也无法验证关于初始检查点的假设是否符合 LangGraph 的实际行为。
+这里通过真实检查点保存器运行真实图来验证。
 """
 
 from unittest.mock import patch
@@ -32,7 +32,7 @@ def build_graph_agent(checkpointer):
 
 
 def build_subgraph_agent(checkpointer):
-    """A graph that calls a checkpointed subgraph, like the supervisor agents do."""
+    """调用带检查点子图的图，模拟主管 Agent 的行为。"""
     inner = StateGraph(MessagesState)
     inner.add_node("echo", echo)
     inner.set_entry_point("echo")
@@ -70,7 +70,7 @@ async def run_turns(agent, thread_id: str, user_id: str, agent_id: str, messages
 
 @pytest_asyncio.fixture
 async def seeded(tmp_path):
-    """Seed two agents x two users, with both single-turn and multi-turn threads."""
+    """预置两个 Agent、两个用户的数据，同时包含单轮和多轮会话。"""
     async with AsyncSqliteSaver.from_conn_string(str(tmp_path / "checkpoints.db")) as checkpointer:
         agents = {
             "graph-agent": build_graph_agent(checkpointer),
@@ -101,7 +101,7 @@ async def seeded(tmp_path):
 
 @pytest.mark.asyncio
 async def test_threads_lists_single_and_multi_turn_threads(seeded) -> None:
-    """Single-turn threads never advance past their head checkpoint - they must still list."""
+    """单轮会话即使未推进到初始检查点之后，也必须出现在列表中。"""
     response = await seeded.get("/graph-agent/threads", params={"user_id": "alice"})
 
     assert response.status_code == 200
@@ -127,7 +127,7 @@ async def test_threads_isolates_users_and_agents(seeded) -> None:
 
 @pytest.mark.asyncio
 async def test_threads_titles_functional_api_agent(seeded) -> None:
-    """Functional-API agents keep messages in `__previous__`, not the `messages` channel."""
+    """函数式 API Agent 将消息保存在 __previous__，而非 messages 通道中。"""
     response = await seeded.get("/functional-agent/threads", params={"user_id": "alice"})
 
     assert response.status_code == 200
@@ -138,11 +138,10 @@ async def test_threads_titles_functional_api_agent(seeded) -> None:
 
 @pytest.mark.asyncio
 async def test_threads_lists_subgraph_threads_once(seeded) -> None:
-    """Subgraph runs write their own head checkpoint under a nested namespace.
+    """子图运行会在嵌套命名空间中写入自己的初始检查点。
 
-    Those inherit the parent run's user_id/agent_id metadata, so they match the same
-    query and would otherwise be listed as extra copies of the thread, each costing
-    its own tip lookup.
+    这些检查点继承父级运行的 user_id 和 agent_id 元数据，因此会匹配相同
+    查询。若不处理，就会被列为重复会话，并且每条都额外查询一次最新检查点。
     """
     tip_lookups: list[str] = []
     original = AsyncSqliteSaver.aget_tuple
@@ -163,7 +162,7 @@ async def test_threads_lists_subgraph_threads_once(seeded) -> None:
 
 @pytest.mark.asyncio
 async def test_threads_orders_by_most_recent_update(seeded) -> None:
-    """A reply to the oldest thread should move it to the top of the list."""
+    """向最早的会话发送回复后，该会话应移到列表顶部。"""
     before = await seeded.get("/graph-agent/threads", params={"user_id": "alice"})
     assert before.json()["threads"][-1]["thread_id"] == "g-alice-single"
 
@@ -190,7 +189,7 @@ async def test_threads_respects_limit(seeded) -> None:
 
 @pytest.mark.asyncio
 async def test_agui_runs_are_listed_by_threads(seeded) -> None:
-    """An AG-UI run records the same metadata, so its thread lists like any other."""
+    """AG-UI 运行应记录相同元数据，使其会话与其他会话一样可被列出。"""
     response = await seeded.post(
         "/agui/graph-agent/run",
         json={

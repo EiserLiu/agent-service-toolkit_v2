@@ -27,11 +27,15 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/info"]
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).close()"
       interval: 5s
       timeout: 5s
       retries: 5
-    # Volume mount of development-only credentials since compose watch doesn't sync ignored files and doesn't do initial sync when the service starts
+    # 挂载仅用于开发的凭证：compose watch 不同步被忽略的文件，且服务启动时不会执行首次同步
     volumes:
       - ./privatecredentials:/privatecredentials
     develop:
@@ -60,7 +64,11 @@ services:
     depends_on:
       - agent_service
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/healthz"]
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3).close()"
       interval: 5s
       timeout: 5s
       retries: 5

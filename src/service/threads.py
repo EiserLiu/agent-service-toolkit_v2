@@ -1,8 +1,7 @@
-"""Thread enumeration for the /threads endpoints.
+"""为 /threads 接口枚举会话。
 
-Threads are derived from the checkpointer rather than a table of their own, so listing
-them means reading checkpoint metadata the way LangGraph writes it. The invariants that
-makes possible are documented at the constants below.
+会话来源于检查点保存器，而非独立的数据表，因此需要按 LangGraph 的写入
+方式读取检查点元数据。实现依赖的固定约定记录在下方常量的注释中。
 """
 
 import logging
@@ -16,24 +15,24 @@ from service.utils import convert_message_content_to_string, messages_from_check
 
 logger = logging.getLogger(__name__)
 
-# LangGraph writes the input checkpoint at step -1 once per thread; later turns continue
-# from the last step. Don't swap in another step - single-turn threads never reach step 1.
+# LangGraph 在每个会话的 step -1 写入一次输入检查点，后续轮次
+# 从最后一步继续。不要替换为其他步骤：单轮会话永远不会到达 step 1。
 THREAD_HEAD_STEP = -1
 
-# Heads are ordered by thread creation, so over-fetch and re-sort by tip to approximate
-# "most recently updated". Threads created before the oldest head fetched fall off.
+# 初始检查点按会话创建顺序排列，因此多取一些，再按最新检查点重新排序，
+# 以近似实现“最近更新优先”。早于本次最早初始检查点创建的会话不会被包含。
 MAX_THREAD_HEADS = 200
 HEAD_PAGE_SIZE = 200
 
-# A head row isn't always a distinct thread: agents with subgraphs write one per subgraph
-# call, inheriting the parent's metadata. Bounds the paging that compensates for it.
+# 每条初始检查点记录不一定对应独立会话：包含子图的 Agent 每次调用子图
+# 都会写入一条继承父级元数据的记录。此值限制用于补偿重复记录的分页次数。
 MAX_HEAD_ROWS = 1000
 
 TITLE_MAX_LENGTH = 60
 
 
 async def _list_thread_heads(checkpointer: Any, user_id: str, agent_id: str) -> list[Any]:
-    """Return one head checkpoint per thread, newest thread first."""
+    """每个会话返回一个初始检查点，较新创建的会话排在前面。"""
     heads: list[Any] = []
     seen: set[str] = set()
     rows_scanned = 0
@@ -69,7 +68,7 @@ async def _list_thread_heads(checkpointer: Any, user_id: str, agent_id: str) -> 
 async def list_user_threads(
     checkpointer: Any, user_id: str, agent_id: str, limit: int
 ) -> list[ThreadSummary]:
-    """List a user's threads for an agent, most recently updated first."""
+    """列出用户在指定 Agent 下的会话，按最近更新时间倒序排列。"""
     summaries: list[tuple[str, ThreadSummary]] = []
     for head in await _list_thread_heads(checkpointer, user_id, agent_id):
         thread_id = head.config["configurable"]["thread_id"]
@@ -84,7 +83,7 @@ async def list_user_threads(
             )
             continue
 
-        # The head has no messages yet, so the title and updated_at come from the tip.
+        # 初始检查点还没有消息，因此标题和 updated_at 从最新检查点获取。
         tip = await checkpointer.aget_tuple(RunnableConfig(configurable={"thread_id": thread_id}))
         if tip is None:
             continue
@@ -104,6 +103,6 @@ async def list_user_threads(
             )
         )
 
-    # Checkpoint IDs are time-ordered UUIDs, so the tip's ID sorts by last update.
+    # 检查点 ID 是按时间排序的 UUID，因此最新检查点的 ID 可用于按最后更新时间排序。
     summaries.sort(key=lambda item: item[0], reverse=True)
     return [summary for _, summary in summaries[:limit]]

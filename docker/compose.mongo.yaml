@@ -1,4 +1,4 @@
-# Adds a MongoDB checkpointer backend, layered on top of the default stack:
+# 在默认服务栈上叠加 MongoDB 检查点后端：
 #   docker compose -f compose.yaml -f docker/compose.mongo.yaml up
 services:
   mongo:

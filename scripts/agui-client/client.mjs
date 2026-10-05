@@ -1,15 +1,15 @@
-// Minimal AG-UI client for manually validating the service's /agui endpoints,
-// built on the official @ag-ui/client SDK. See docs/AGUI.md for details.
+// 用于手动验证服务 /agui 接口的最小 AG-UI 客户端，
+// 基于官方 @ag-ui/client SDK 构建。详见 docs/AGUI.md。
 //
-// Usage:
+// 用法：
 //   cd scripts/agui-client
 //   npm install
 //   node client.mjs [message] [agent]
 //
-// Environment variables:
-//   AGENT_URL   - base URL of the agent service (default: http://localhost:8080)
-//   AUTH_SECRET - bearer token, if the service has one configured
-//   THREAD_ID   - reuse a thread to continue a conversation (default: random)
+// 环境变量：
+//   AGENT_URL   - Agent 服务的基础地址（默认：http://localhost:8080）
+//   AUTH_SECRET - 服务配置了认证时使用的 Bearer 令牌
+//   THREAD_ID   - 复用会话以继续对话（默认：随机生成）
 
 import { randomUUID } from "crypto";
 import { HttpAgent } from "@ag-ui/client";
@@ -42,9 +42,9 @@ try {
         eventTypes.add(event.type);
       },
       onTextMessageContentEvent({ event }) {
-        // Print each delta as it arrives rather than re-rendering the full buffer -
-        // an in-place overwrite via \r depends on terminal support that isn't
-        // consistent (e.g. piping through `docker compose logs`).
+        // 每个增量到达后立即输出，不重新渲染整个缓冲区。
+        // 使用 \r 原地覆盖依赖终端支持，
+        // 而不同环境的支持并不一致（例如通过 `docker compose logs` 管道输出时）。
         if (!printedPrefix) {
           process.stdout.write("assistant: ");
           printedPrefix = true;

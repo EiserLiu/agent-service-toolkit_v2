@@ -45,7 +45,7 @@ class LogLevel(StrEnum):
     CRITICAL = "CRITICAL"
 
     def to_logging_level(self) -> int:
-        """Convert to Python logging level constant."""
+        """转换为 Python 日志级别常量。"""
         import logging
 
         mapping = {
@@ -92,18 +92,18 @@ class Settings(BaseSettings):
     USE_FAKE_MODEL: bool = False
     OPENROUTER_API_KEY: SecretStr | None = None
 
-    # If DEFAULT_MODEL is None, it will be set in model_post_init
+    # DEFAULT_MODEL 为 None 时，会在 model_post_init 中设置
     DEFAULT_MODEL: AllModelEnum | None = None  # type: ignore[assignment]
     AVAILABLE_MODELS: set[AllModelEnum] = set()  # type: ignore[assignment]
 
-    # Set openai compatible api, mainly used for proof of concept
+    # 设置 OpenAI 兼容 API，主要用于概念验证
     COMPATIBLE_MODEL: str | None = None
     COMPATIBLE_API_KEY: SecretStr | None = None
     COMPATIBLE_BASE_URL: str | None = None
 
     OPENWEATHERMAP_API_KEY: SecretStr | None = None
 
-    # MCP Configuration
+    # MCP 配置
     GITHUB_PAT: SecretStr | None = None
     MCP_GITHUB_SERVER_URL: str = "https://api.githubcopilot.com/mcp/"
 
@@ -119,13 +119,13 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: SecretStr | None = None
     LANGFUSE_SECRET_KEY: SecretStr | None = None
 
-    # Database Configuration
+    # 数据库配置
     DATABASE_TYPE: DatabaseType = (
         DatabaseType.SQLITE
-    )  # Options: DatabaseType.SQLITE or DatabaseType.POSTGRES
+    )  # 可选值：DatabaseType.SQLITE 或 DatabaseType.POSTGRES
     SQLITE_DB_PATH: str = "checkpoints.db"
 
-    # PostgreSQL Configuration
+    # PostgreSQL 配置
     POSTGRES_USER: str | None = None
     POSTGRES_PASSWORD: SecretStr | None = None
     POSTGRES_HOST: str | None = None
@@ -135,16 +135,16 @@ class Settings(BaseSettings):
     POSTGRES_MIN_CONNECTIONS_PER_POOL: int = 1
     POSTGRES_MAX_CONNECTIONS_PER_POOL: int = 1
 
-    # MongoDB Configuration
+    # MongoDB 配置
     MONGO_HOST: str | None = None
     MONGO_PORT: int | None = None
     MONGO_DB: str | None = None
     MONGO_USER: str | None = None
     MONGO_PASSWORD: SecretStr | None = None
     MONGO_AUTH_SOURCE: str | None = None
-    MONGO_TLS: bool = False  # opt-in TLS for MongoDB; set to True for production/Atlas
+    MONGO_TLS: bool = False  # 按需启用 MongoDB TLS；生产环境或 Atlas 应设为 True
 
-    # Azure OpenAI Settings
+    # Azure OpenAI 配置
     AZURE_OPENAI_API_KEY: SecretStr | None = None
     AZURE_OPENAI_ENDPOINT: str | None = None
     AZURE_OPENAI_API_VERSION: str = "2024-02-15-preview"
@@ -171,7 +171,7 @@ class Settings(BaseSettings):
         if not active_keys:
             raise ValueError("At least one LLM API key must be provided.")
 
-        # USE_FAKE_MODEL must win the default even when real provider keys are present.
+        # 即使配置了真实服务商密钥，也必须优先由 USE_FAKE_MODEL 决定默认模型。
         if self.USE_FAKE_MODEL and self.DEFAULT_MODEL is None:
             self.DEFAULT_MODEL = FakeModelName.FAKE
 
@@ -225,7 +225,7 @@ class Settings(BaseSettings):
                     if self.DEFAULT_MODEL is None:
                         self.DEFAULT_MODEL = AzureOpenAIModelName.AZURE_GPT_5_MINI
                     self.AVAILABLE_MODELS.update(set(AzureOpenAIModelName))
-                    # Validate Azure OpenAI settings if Azure provider is available
+                    # Azure 服务商可用时，验证 Azure OpenAI 配置
                     if not self.AZURE_OPENAI_API_KEY:
                         raise ValueError("AZURE_OPENAI_API_KEY must be set")
                     if not self.AZURE_OPENAI_ENDPOINT:
@@ -233,7 +233,7 @@ class Settings(BaseSettings):
                     if not self.AZURE_OPENAI_DEPLOYMENT_MAP:
                         raise ValueError("AZURE_OPENAI_DEPLOYMENT_MAP must be set")
 
-                    # Parse deployment map if it's a string
+                    # 部署映射为字符串时，对其进行解析
                     if isinstance(self.AZURE_OPENAI_DEPLOYMENT_MAP, str):
                         try:
                             self.AZURE_OPENAI_DEPLOYMENT_MAP = loads(
@@ -242,7 +242,7 @@ class Settings(BaseSettings):
                         except Exception as e:
                             raise ValueError(f"Invalid AZURE_OPENAI_DEPLOYMENT_MAP JSON: {e}")
 
-                    # Validate required deployments exist
+                    # 验证必需的部署是否存在
                     required_models = {"gpt-5", "gpt-5-mini"}
                     missing_models = required_models - set(self.AZURE_OPENAI_DEPLOYMENT_MAP.keys())
                     if missing_models:

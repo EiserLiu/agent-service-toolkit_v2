@@ -9,16 +9,22 @@ model = get_model(settings.DEFAULT_MODEL)
 
 
 def add(a: float, b: float) -> float:
+    # 工具说明：将两个数相加。
+    # 下方英文文档会作为工具元数据传给模型，保留原文以维持调用行为。
     """Add two numbers."""
     return a + b
 
 
 def multiply(a: float, b: float) -> float:
+    # 工具说明：将两个数相乘。
+    # 下方英文文档会作为工具元数据传给模型，保留原文以维持调用行为。
     """Multiply two numbers."""
     return a * b
 
 
 def web_search(query: str) -> str:
+    # 工具说明：搜索网络以获取信息。
+    # 下方英文文档会作为工具元数据传给模型，保留原文以维持调用行为。
     """Search the web for information."""
     return (
         "Here are the headcounts for each of the FAANG companies in 2024:\n"
@@ -45,7 +51,7 @@ research_agent: Any = create_agent(
 ).with_config(tags=["skip_stream"])
 
 
-# Create supervisor workflow
+# 创建主管 Agent 工作流
 workflow = create_supervisor(
     [research_agent, math_agent],
     model=model,
@@ -55,8 +61,8 @@ workflow = create_supervisor(
         "For math problems, use math_agent."
     ),
     add_handoff_back_messages=True,
-    # UI now expects this to be True so we don't have to guess when a handoff back occurs
-    output_mode="full_history",  # otherwise when reloading conversations, the sub-agents' messages are not included
+    # 界面要求此值为 True，以便明确识别控制权何时交还
+    output_mode="full_history",  # 否则重新加载对话时，不会包含子 Agent 的消息
 )
 
 langgraph_supervisor_agent = workflow.compile()

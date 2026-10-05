@@ -22,9 +22,8 @@ def _has_auth_credentials() -> bool:
 
 
 def validate_mongo_config() -> None:
-    """
-    Validate that all required MongoDB configuration is present.
-    Raises ValueError if any required configuration is missing.
+    """验证是否已提供所有必需的 MongoDB 配置。
+    缺少任何必需配置时抛出 ValueError。
     """
     required_always = ["MONGO_HOST", "MONGO_PORT", "MONGO_DB"]
     missing_always = [var for var in required_always if not getattr(settings, var, None)]
@@ -38,11 +37,11 @@ def validate_mongo_config() -> None:
 
 
 def get_mongo_connection_string() -> str:
-    """Build and return the MongoDB connection string from settings."""
+    """根据配置构建并返回 MongoDB 连接字符串。"""
 
     tls_param = "&tls=true" if settings.MONGO_TLS else ""
     if _has_auth_credentials():
-        if settings.MONGO_PASSWORD is None:  # for type checking
+        if settings.MONGO_PASSWORD is None:  # 用于类型检查
             raise ValueError("MONGO_PASSWORD is not set")
         password = settings.MONGO_PASSWORD.get_secret_value().strip()
         password_escaped = urllib.parse.quote_plus(password)
@@ -57,10 +56,10 @@ def get_mongo_connection_string() -> str:
 
 
 class _AsyncMongoDBSaver(AbstractAsyncContextManager[MongoDBSaver]):
-    """Async context manager wrapping MongoDBSaver, which is sync-only as of
-    langgraph-checkpoint-mongodb 0.4 (it bridges to async internally via a thread executor).
-    Connecting and building the saver's indexes does blocking I/O, so both are run off the
-    event loop thread.
+    """封装 MongoDBSaver 的异步上下文管理器。
+    在 langgraph-checkpoint-mongodb 0.4 中，它只提供同步实现，内部通过线程
+    执行器桥接异步调用。建立连接和创建保存器索引都会执行阻塞 I/O，
+    因此均在事件循环线程之外运行。
     """
 
     def __init__(self, conn_string: str, db_name: str):
@@ -82,8 +81,8 @@ class _AsyncMongoDBSaver(AbstractAsyncContextManager[MongoDBSaver]):
 
 
 def get_mongo_saver() -> AbstractAsyncContextManager[MongoDBSaver]:
-    """Initialize and return a MongoDB saver instance."""
+    """初始化并返回 MongoDB 保存器实例。"""
     validate_mongo_config()
-    if settings.MONGO_DB is None:  # for type checking
+    if settings.MONGO_DB is None:  # 用于类型检查
         raise ValueError("MONGO_DB is not set")
     return _AsyncMongoDBSaver(get_mongo_connection_string(), settings.MONGO_DB)

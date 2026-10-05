@@ -65,8 +65,8 @@ type ModelT = (
 
 @cache
 def get_model(model_name: AllModelEnum, /) -> ModelT:
-    # NOTE: models with streaming=True will send tokens as they are generated
-    # if the /stream endpoint is called with stream_tokens=True (the default)
+    # 注意：模型设置 streaming=True，且调用 /stream 接口时
+    # stream_tokens=True（默认值），就会实时发送生成的 token
     api_model_name = _MODEL_TABLE.get(model_name)
     if not api_model_name:
         raise ValueError(f"Unsupported model: {model_name}")
@@ -88,7 +88,7 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
         if not settings.AZURE_OPENAI_API_KEY or not settings.AZURE_OPENAI_ENDPOINT:
             raise ValueError("Azure OpenAI API key and endpoint must be configured")
 
-        # GPT-5 generation is reasoning-based and rejects temperature (400); omit it.
+        # GPT-5 基于推理生成，传入 temperature 会被拒绝并返回 400，因此省略。
         return AzureChatOpenAI(
             azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
             deployment_name=api_model_name,
@@ -107,9 +107,9 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
         )
     if model_name in AnthropicModelName:
         if model_name == AnthropicModelName.SONNET_5:
-            # Claude Sonnet 5 rejects non-default sampling parameters (temperature,
-            # top_p, top_k) with a 400 error -- adaptive thinking is on by default
-            # instead. See https://docs.anthropic.com/en/docs/about-claude/models
+            # Claude Sonnet 5 默认启用自适应思考，不接受非默认采样参数
+            # （temperature、top_p、top_k），否则返回 400。
+            # 参考：https://docs.anthropic.com/en/docs/about-claude/models
             return ChatAnthropic(model_name=api_model_name, streaming=True)
         return ChatAnthropic(model_name=api_model_name, temperature=0.5, streaming=True)
     if model_name in GoogleModelName:
@@ -122,7 +122,7 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
         return ChatGroq(model=api_model_name, temperature=0.5)  # type: ignore[call-arg]
     if model_name in AWSModelName:
         if model_name == AWSModelName.BEDROCK_SONNET:
-            # Sonnet 5 rejects non-default sampling params (400); omit temperature.
+            # Sonnet 5 不接受非默认采样参数（返回 400），因此省略 temperature。
             return ChatBedrock(model=api_model_name)
         return ChatBedrock(model=api_model_name, temperature=0.5)
     if model_name in OllamaModelName:
@@ -136,8 +136,8 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
             chat_ollama = ChatOllama(model=settings.OLLAMA_MODEL, temperature=0.5)
         return chat_ollama
     if model_name in OpenRouterModelName:
-        # Without an explicit key the openai SDK falls back to OPENAI_API_KEY,
-        # which would send that key to openrouter.ai.
+        # 如果未显式提供密钥，OpenAI SDK 会回退到 OPENAI_API_KEY，
+        # 从而将该密钥发送到 openrouter.ai。
         if not settings.OPENROUTER_API_KEY:
             raise ValueError("OpenRouter API key must be configured")
 

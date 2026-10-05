@@ -1,9 +1,9 @@
 name: Template cleanup
 
-# One-shot cleanup that runs the first time this template is instantiated into a
-# downstream repo. It strips maintainer-only scaffolding, commits the result, then
-# deletes itself so it never runs again. The owner-guard below makes it a no-op in
-# the source repo.
+# 首次使用此模板创建下游仓库时，执行一次清理。
+# 移除维护者专用的配套文件，提交清理结果，
+# 然后删除本工作流，确保不再运行。下方的所有者检查
+# 确保本工作流在源仓库中不执行任何操作。
 on:
   push:
     branches:
@@ -14,9 +14,9 @@ permissions:
 
 jobs:
   cleanup:
-    # Run only in genuine template instantiations. The repository check skips the
-    # source repo; the fork check skips contributor forks (also downstream copies,
-    # where a "Use this template" repo has fork == false but a fork has fork == true).
+    # 仅在真正由模板创建的仓库中运行。仓库名称检查跳过
+    # 源仓库；fork 检查跳过贡献者的 fork（它们也是下游副本，
+    # 但“Use this template”创建的仓库 fork == false，而 fork 仓库 fork == true）。
     if: >-
       github.repository != 'JoshuaC215/agent-service-toolkit'
       && github.event.repository.fork == false
@@ -29,12 +29,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Whole-directory buckets: maintainer automation and maintenance docs.
+          # 整目录清理：维护者自动化配置与维护文档。
           rm -rf .claude docs/maintenance
 
-          # Owner-guarded workflows self-identify via the maintainer owner-guard, so
-          # new guarded workflows are covered without editing this list. Skip the
-          # generic CI (test.yml, which has no guard) and this file (deleted last).
+          # 带所有者限制的工作流通过维护者所有者检查自行标识，
+          # 因此新增此类工作流时无需修改列表。跳过通用
+          # CI（无所有者检查的 test.yml）和本文件（最后删除）。
           guard="github.repository == 'JoshuaC215/agent-service-toolkit'"
           for wf in .github/workflows/*.yml; do
             [ "$wf" = ".github/workflows/template-cleanup.yml" ] && continue
@@ -43,11 +43,11 @@ jobs:
             fi
           done
 
-          # Explicit list: maintainer-only files in shared dirs that cannot carry the
-          # owner-guard marker. Keep in sync with the CLAUDE.md convention.
-          # (none currently)
+          # 显式列表：共享目录中无法携带所有者检查标记的维护者专用文件。
+          # 请与 CLAUDE.md 中的约定保持一致。
+          # （当前为空）
 
-          # Delete self last so this workflow never runs again.
+          # 最后删除自身，确保此工作流不再运行。
           rm -f .github/workflows/template-cleanup.yml
 
       - name: Commit cleanup

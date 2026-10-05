@@ -18,11 +18,11 @@ from schema.models import (
 
 
 def test_check_str_is_http():
-    # Test valid HTTP URLs
+    # 测试有效的 HTTP 地址
     assert check_str_is_http("http://example.com/") == "http://example.com/"
     assert check_str_is_http("https://api.test.com/") == "https://api.test.com/"
 
-    # Test invalid URLs
+    # 测试无效地址
     with pytest.raises(ValidationError):
         check_str_is_http("not_a_url")
     with pytest.raises(ValidationError):
@@ -38,7 +38,7 @@ def test_settings_default_values():
 
 
 def test_settings_no_api_keys():
-    # Test that settings raises error when no API keys are provided
+    # 测试未提供任何 API 密钥时配置会报错
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="At least one LLM API key must be provided"):
             _ = Settings(_env_file=None)
@@ -66,7 +66,7 @@ def test_settings_with_openrouter_key():
         assert settings.OPENROUTER_API_KEY == SecretStr("test_key")
         assert settings.DEFAULT_MODEL == OpenRouterModelName.GEMINI_38_FLASH
         assert settings.AVAILABLE_MODELS == set(OpenRouterModelName)
-        # SecretStr keeps the key out of logs and tracebacks that render Settings.
+        # SecretStr 避免在展示 Settings 的日志和异常堆栈中泄露密钥。
         assert "test_key" not in repr(settings)
 
 
@@ -90,9 +90,9 @@ def test_settings_with_multiple_api_keys():
         settings = Settings(_env_file=None)
         assert settings.OPENAI_API_KEY == SecretStr("test_openai_key")
         assert settings.ANTHROPIC_API_KEY == SecretStr("test_anthropic_key")
-        # When multiple providers are available, OpenAI should be the default
+        # 多个服务商可用时，应默认使用 OpenAI
         assert settings.DEFAULT_MODEL == OpenAIModelName.GPT_5_NANO
-        # Available models should include exactly all OpenAI and Anthropic models
+        # 可用模型应恰好包含全部 OpenAI 和 Anthropic 模型
         expected_models = set(OpenAIModelName)
         expected_models.update(set(AnthropicModelName))
         assert settings.AVAILABLE_MODELS == expected_models
@@ -106,7 +106,7 @@ def test_settings_use_fake_model():
 
 
 def test_settings_use_fake_model_wins_over_ambient_real_keys():
-    # USE_FAKE_MODEL must win the default even when real provider keys are present.
+    # 即使配置了真实服务商密钥，也必须优先由 USE_FAKE_MODEL 决定默认模型。
     with patch.dict(
         os.environ,
         {
@@ -119,13 +119,13 @@ def test_settings_use_fake_model_wins_over_ambient_real_keys():
     ):
         settings = Settings(_env_file=None)
         assert settings.DEFAULT_MODEL == FakeModelName.FAKE
-        # AVAILABLE_MODELS still unions every active provider.
+        # AVAILABLE_MODELS 仍包含所有已启用服务商的模型。
         assert set(FakeModelName).issubset(settings.AVAILABLE_MODELS)
         assert set(OpenAIModelName).issubset(settings.AVAILABLE_MODELS)
 
 
 def test_settings_explicit_default_model_overrides_fake():
-    # An explicit DEFAULT_MODEL takes precedence over USE_FAKE_MODEL.
+    # 显式设置的 DEFAULT_MODEL 优先于 USE_FAKE_MODEL。
     with patch.dict(
         os.environ,
         {"USE_FAKE_MODEL": "true", "OPENAI_API_KEY": "test_openai_key"},
@@ -178,16 +178,16 @@ def test_settings_with_both_openai_and_azure():
         settings = Settings(_env_file=None)
         assert settings.OPENAI_API_KEY == SecretStr("test_openai_key")
         assert settings.AZURE_OPENAI_API_KEY == SecretStr("test_azure_key")
-        # When multiple providers are available, OpenAI should be the default
+        # 多个服务商可用时，应默认使用 OpenAI
         assert settings.DEFAULT_MODEL == OpenAIModelName.GPT_5_NANO
-        # Available models should include both OpenAI and Azure OpenAI models
+        # 可用模型应同时包含 OpenAI 和 Azure OpenAI 模型
         expected_models = set(OpenAIModelName)
         expected_models.update(set(AzureOpenAIModelName))
         assert settings.AVAILABLE_MODELS == expected_models
 
 
 def test_settings_azure_deployment_names():
-    # Delete this test
+    # 删除此测试
     pass
 
 
@@ -227,7 +227,7 @@ def test_settings_azure_invalid_deployment_map():
         {
             "AZURE_OPENAI_API_KEY": "test_key",
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-            "AZURE_OPENAI_DEPLOYMENT_MAP": '{"gpt-5": "deploy1"}',  # Missing required model
+            "AZURE_OPENAI_DEPLOYMENT_MAP": '{"gpt-5": "deploy1"}',  # 缺少必需模型
         },
         clear=True,
     ):
@@ -236,7 +236,7 @@ def test_settings_azure_invalid_deployment_map():
 
 
 def test_settings_azure_openai():
-    """Test Azure OpenAI settings."""
+    """测试 Azure OpenAI 配置。"""
     deployment_map = {"gpt-5": "deployment1", "gpt-5-mini": "deployment2"}
     with patch.dict(
         os.environ,
@@ -253,7 +253,7 @@ def test_settings_azure_openai():
 
 
 def test_log_level_enum():
-    """Test LogLevel enum and its conversion to logging levels."""
+    """测试 LogLevel 枚举及其到日志级别的转换。"""
     assert LogLevel.DEBUG.to_logging_level() == logging.DEBUG
     assert LogLevel.INFO.to_logging_level() == logging.INFO
     assert LogLevel.WARNING.to_logging_level() == logging.WARNING
@@ -262,7 +262,7 @@ def test_log_level_enum():
 
 
 def test_settings_log_level_default():
-    """Test that LOG_LEVEL defaults to WARNING."""
+    """测试 LOG_LEVEL 默认值为 WARNING。"""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}, clear=True):
         settings = Settings(_env_file=None)
         assert settings.LOG_LEVEL == LogLevel.WARNING
@@ -270,7 +270,7 @@ def test_settings_log_level_default():
 
 
 def test_settings_log_level_from_env():
-    """Test that LOG_LEVEL can be set from environment variable."""
+    """测试通过环境变量设置 LOG_LEVEL。"""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key", "LOG_LEVEL": "DEBUG"}, clear=True):
         settings = Settings(_env_file=None)
         assert settings.LOG_LEVEL == LogLevel.DEBUG

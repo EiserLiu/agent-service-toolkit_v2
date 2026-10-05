@@ -9,7 +9,7 @@ from schema import AgentInfo
 
 @pytest.mark.asyncio
 async def test_lifespan(monkeypatch, caplog) -> None:
-    """Test that the lifespan sets up the database and store, loads the agents, and logs errors."""
+    """测试生命周期是否初始化数据库和存储、加载 Agent，并记录错误。"""
     from service import service
 
     fake_saver_setup = False

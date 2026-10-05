@@ -1,30 +1,29 @@
-"""Voice input/output module.
+"""语音输入和输出模块。
 
-Provides speech-to-text and text-to-speech capabilities with support
-for multiple providers.
+提供语音转文本和文本转语音功能，支持多个服务商。
 
-Modules:
-    - SpeechToText: STT handler (can be used standalone)
-    - TextToSpeech: TTS handler (can be used standalone)
-    - VoiceManager: Streamlit convenience wrapper
+模块：
+    - SpeechToText：语音转文本处理器（可独立使用）
+    - TextToSpeech：文本转语音处理器（可独立使用）
+    - VoiceManager：面向 Streamlit 的便捷封装
 
-Quick Start:
+快速入门：
     >>> from voice import VoiceManager
     >>>
-    >>> # Easy way: create from environment
+    >>> # 简便方式：从环境变量创建
     >>> voice = VoiceManager.from_env()
     >>>
-    >>> # Use in Streamlit
+    >>> # 在 Streamlit 中使用
     >>> if voice:
     ...     user_input = voice.get_chat_input()
-    ...     # ... process input ...
+    ...     # 此处处理输入
     ...     with st.chat_message("ai"):
     ...         voice.render_message(response)
 
-Advanced Usage:
+进阶用法：
     >>> from voice import SpeechToText, TextToSpeech, VoiceManager
     >>>
-    >>> # Mix providers: OpenAI STT + custom TTS
+    >>> # 可混用服务商，例如 OpenAI STT 与自定义 TTS
     >>> stt = SpeechToText(provider="openai")
     >>> tts = TextToSpeech(provider="openai", voice="nova")
     >>> voice = VoiceManager(stt=stt, tts=tts)

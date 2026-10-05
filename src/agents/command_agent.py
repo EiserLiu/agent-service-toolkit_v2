@@ -7,30 +7,30 @@ from langgraph.types import Command
 
 
 class AgentState(MessagesState, total=False):
-    """`total=False` is PEP589 specs.
+    """`total=False` 来自 PEP 589 规范。
 
-    documentation: https://typing.readthedocs.io/en/latest/spec/typeddict.html#totality
+    文档：https://typing.readthedocs.io/en/latest/spec/typeddict.html#totality
     """
 
 
-# Define the nodes
+# 定义节点
 
 
 def node_a(state: AgentState) -> Command[Literal["node_b", "node_c"]]:
     print("Called A")
     value = random.choice(["a", "b"])
     goto: Literal["node_b", "node_c"]
-    # this is a replacement for a conditional edge function
+    # 这里替代了条件边函数的作用
     if value == "a":
         goto = "node_b"
     else:
         goto = "node_c"
 
-    # note how Command allows you to BOTH update the graph state AND route to the next node
+    # 注意：Command 可以同时更新图状态并指定下一个节点
     return Command(
-        # this is the state update
+        # 这里更新状态
         update={"messages": [AIMessage(content=f"Hello {value}")]},
-        # this is a replacement for an edge
+        # 这里替代了边的作用
         goto=goto,
     )
 
@@ -50,6 +50,6 @@ builder.add_edge(START, "node_a")
 builder.add_node(node_a)
 builder.add_node(node_b)
 builder.add_node(node_c)
-# NOTE: there are no edges between nodes A, B and C!
+# 注意：节点 A、B、C 之间没有显式定义边！
 
 command_agent = builder.compile()

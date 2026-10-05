@@ -11,7 +11,7 @@ def workflow(chosen_model):
     math_agent = create_agent(
         model=chosen_model,
         tools=[add, multiply],
-        name="sub-agent-math_expert",  # Identify the graph node as a sub-agent
+        name="sub-agent-math_expert",  # 将此图节点标记为子 Agent
         system_prompt="You are a math expert. Always use one tool at a time.",
     ).with_config(tags=["skip_stream"])
 
@@ -21,15 +21,13 @@ def workflow(chosen_model):
             model=chosen_model,
             tools=[web_search],
             prompt="You are a world class researcher with access to web search. Do not do any math, you have a math expert for that. ",
-            supervisor_name="supervisor-research_expert",  # Identify the graph node as a supervisor to the math agent
+            supervisor_name="supervisor-research_expert",  # 将此图节点标记为数学 Agent 的主管
         )
-        .compile(
-            name="sub-agent-research_expert"
-        )  # Identify the graph node as a sub-agent to the main supervisor
+        .compile(name="sub-agent-research_expert")  # 将此图节点标记为主主管的子 Agent
         .with_config(tags=["skip_stream"])
-    )  # Stream tokens are ignored for sub-agents in the UI
+    )  # 界面忽略子 Agent 的流式 token
 
-    # Create supervisor workflow
+    # 创建主管 Agent 工作流
     return create_supervisor(
         [research_agent],
         model=chosen_model,
@@ -38,9 +36,9 @@ def workflow(chosen_model):
             "For current events, use research_agent. "
         ),
         add_handoff_back_messages=True,
-        # UI now expects this to be True so we don't have to guess when a handoff back occurs
-        output_mode="full_history",  # otherwise when reloading conversations, the sub-agents' messages are not included
-    )  # default name for supervisor is "supervisor".
+        # 界面要求此值为 True，以便明确识别控制权何时交还
+        output_mode="full_history",  # 否则重新加载对话时，不会包含子 Agent 的消息
+    )  # 主管 Agent 的默认名称为 "supervisor"。
 
 
 langgraph_supervisor_hierarchy_agent = workflow(model).compile()

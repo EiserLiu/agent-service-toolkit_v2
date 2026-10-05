@@ -37,33 +37,33 @@ EXPECTED_OUTPUT_MESSAGES = [
 
 
 def test_messages_conversion() -> None:
-    """Verify that our list of messages is converted to the expected output."""
+    """验证消息列表是否转换为预期输出。"""
 
     messages = EXPECTED_OUTPUT_MESSAGES
 
-    # Verify the sequence of messages
+    # 验证消息顺序
     assert len(messages) == 5
 
-    # First message: Custom data start marker
+    # 第一条消息：自定义数据开始标记
     assert messages[0].type == "custom"
     assert messages[0].custom_data == {"key1": "value1", "key2": 123}
 
-    # Second message: AI with tool call
+    # 第二条消息：包含工具调用的 AI 消息
     assert messages[1].type == "ai"
     assert len(messages[1].tool_calls) == 1
     assert messages[1].tool_calls[0]["name"] == "test_tool"
     assert messages[1].tool_calls[0]["args"] == {"arg1": "value1"}
 
-    # Third message: Tool response
+    # 第三条消息：工具响应
     assert messages[2].type == "tool"
     assert messages[2].content == "42"
     assert messages[2].tool_call_id == "test_call_id"
 
-    # Fourth message: Final AI response
+    # 第四条消息：AI 最终响应
     assert messages[3].type == "ai"
     assert messages[3].content == "The answer is 42"
 
-    # Fifth message: Custom data end marker
+    # 第五条消息：自定义数据结束标记
     assert messages[4].type == "custom"
     assert messages[4].custom_data == {"time": "end"}
 
@@ -82,18 +82,18 @@ static_agent = agent.compile(checkpointer=MemorySaver())
 
 @pytest.fixture
 def mock_database_settings(mock_env):
-    """Fixture to ensure database settings are clean"""
+    """确保数据库配置互不污染的测试夹具。"""
     with patch("memory.settings") as mock_settings:
         yield mock_settings
 
 
 def test_agent_stream(mock_database_settings, mock_httpx):
-    """Test that streaming from our static agent works correctly with token streaming."""
+    """测试静态 Agent 是否能正确流式输出，并包含 token。"""
     agent_meta = Agent(description="A static agent.", graph_like=static_agent)
     with patch.dict("agents.agents.agents", {"static-agent": agent_meta}, clear=True):
         client = AgentClient(agent="static-agent")
 
-    # Use stream to get intermediate responses
+    # 使用流式调用获取中间响应
     messages = []
 
     def agent_lookup(agent_id):

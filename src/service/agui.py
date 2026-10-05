@@ -1,12 +1,10 @@
-"""AG-UI protocol endpoint for the agent service.
+"""Agent 服务的 AG-UI 协议接口。
 
-Exposes any agent in the service over the AG-UI protocol (https://docs.ag-ui.com)
-so it can be used with AG-UI compatible frontends like CopilotKit. The
-LangGraph -> AG-UI event translation is handled by the official `ag-ui-langgraph`
-package; this module only wires it into the service's agent registry, auth, and
-tracing.
+通过 AG-UI 协议（https://docs.ag-ui.com）暴露服务中的任意 Agent，
+以对接 CopilotKit 等兼容前端。LangGraph 到 AG-UI 的事件转换由官方
+ag-ui-langgraph 包处理；本模块仅将它接入服务的 Agent 注册表、认证和追踪。
 
-See docs/AGUI.md for usage, including how to connect a client.
+用法及客户端连接方法见 docs/AGUI.md。
 """
 
 import logging
@@ -30,18 +28,17 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agui")
 
-# Managed by the protocol (thread_id comes from RunAgentInput) or the checkpointer,
-# so clients may not override them via forwardedProps.configurable.
+# 这些字段由协议（thread_id 来自 RunAgentInput）或检查点保存器管理，
+# 因此客户端不能通过 forwardedProps.configurable 覆盖它们。
 RESERVED_CONFIGURABLE_KEYS = {"thread_id", "checkpoint_id", "checkpoint_ns"}
 
 
 def _base_config(input_data: RunAgentInput, agent_id: str) -> RunnableConfig:
-    """Build the base RunnableConfig for an AG-UI run.
+    """构建 AG-UI 运行所需的基础 RunnableConfig。
 
-    Clients can pass configurable values (e.g. `model`, `user_id`, or custom agent
-    config) in `forwardedProps.configurable` - the AG-UI equivalent of the vanilla
-    API's `model` / `user_id` / `agent_config` fields. `thread_id` is taken from
-    the AG-UI input by the `ag-ui-langgraph` package itself.
+    客户端可通过 forwardedProps.configurable 传入 model、user_id 或自定义
+    Agent 配置，对应原生 API 的 model、user_id 和 agent_config 字段。
+    thread_id 由 ag-ui-langgraph 包直接从 AG-UI 输入中获取。
     """
     forwarded: dict[str, Any] = input_data.forwarded_props or {}
     configurable = forwarded.get("configurable") or {}
@@ -65,7 +62,7 @@ def _base_config(input_data: RunAgentInput, agent_id: str) -> RunnableConfig:
 
     return RunnableConfig(
         configurable=configurable,
-        # Recorded in checkpoint metadata so AG-UI threads show up in /threads too.
+        # 记录到检查点元数据中，使 AG-UI 会话也能出现在 /threads 中。
         metadata={"user_id": user_id, "agent_id": agent_id},
         callbacks=callbacks,
     )
@@ -78,14 +75,14 @@ async def _event_stream(
     config: RunnableConfig,
     encoder: EventEncoder,
 ) -> AsyncGenerator[str, None]:
-    # A new LangGraphAgent per request: it holds per-run state and is cheap to build.
+    # 每个请求创建一个 LangGraphAgent：它保存单次运行状态，且构建开销较低。
     agent = LangGraphAgent(name=agent_id, graph=graph, config=config)  # type: ignore[arg-type]
     async for event in agent.run(input_data):
-        # Don't forward RAW passthrough events. Standard AG-UI clients ignore them,
-        # and they expose server-side internals - including fully rendered prompts
-        # from on_chat_model_start - to the caller. Remove this filter only if the
-        # endpoint is consumed by a trusted middle layer and you want the full
-        # event firehose (e.g. for the AG-UI Event Inspector).
+        # 不转发 RAW 透传事件。标准 AG-UI 客户端会忽略这些事件，
+        # 而且它们会向调用者暴露服务端内部信息，包括
+        # on_chat_model_start 中已完整渲染的提示词。只有在接口由
+        # 可信中间层调用，且确实需要完整事件流时才移除此过滤，
+        # 例如用于 AG-UI Event Inspector。
         if event.type == EventType.RAW:
             continue
         yield encoder.encode(event)
@@ -96,12 +93,11 @@ async def _event_stream(
 async def agui_run(
     input_data: RunAgentInput, request: Request, agent_id: str = DEFAULT_AGENT
 ) -> StreamingResponse:
-    """
-    Run an agent over the AG-UI protocol, streaming AG-UI events via SSE.
+    """通过 AG-UI 协议运行 Agent，以 SSE 流式发送 AG-UI 事件。
 
-    Point an AG-UI client (e.g. CopilotKit's runtime or HttpAgent) at this endpoint.
-    Use the same threadId across runs to continue a conversation - threads are
-    persisted in the service's checkpointer and shared with the vanilla API.
+    将 AG-UI 客户端（如 CopilotKit 运行时或 HttpAgent）指向此接口。
+    多次运行使用相同 threadId 即可继续对话；会话通过服务的检查点保存器
+    持久化，并与原生 API 共享。
     """
     try:
         graph: AgentGraph = get_agent(agent_id)

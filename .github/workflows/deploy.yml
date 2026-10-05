@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    # Don't try to run deployment in forks and repo copies
+    # 不在 fork 或仓库副本中执行部署
     if: github.repository == 'JoshuaC215/agent-service-toolkit'
     uses: ./.github/workflows/test.yml
 
